@@ -22,7 +22,14 @@ cp .env.example .env      # rellena los valores reales (nunca los subas)
 ./init.sh --quick         # igual, pero sin pruebas
 ```
 
-Después de F-00: `npm install`, `npm run start:dev` → `http://localhost:3000/api/v1/health`.
+```bash
+npm install
+npm run start:dev          # http://localhost:3000/api/v1/health · Swagger: /api/v1/docs
+npm test                   # unitarias + e2e (Jest)
+npm run lint && npm run typecheck
+npm run openapi:export     # regenera openapi/asclepio-api.v1.json
+```
+> npm 11 bloquea los scripts de postinstall. Si `prisma` pide motores, ejecuta `npm approve-scripts @prisma/engines`.
 
 ## Cómo trabajar con el harness (SDD)
 1. Abre Claude Code en este directorio. `CLAUDE.md` lo pone en el rol **leader**.

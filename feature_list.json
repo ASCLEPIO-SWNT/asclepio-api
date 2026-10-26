@@ -24,7 +24,7 @@
       "depends_on": [],
       "contract": {
         "changes": true,
-        "version": null
+        "version": "0.1.0"
       },
       "touches_db": false,
       "acceptance": [
@@ -34,7 +34,7 @@
         "./init.sh completo en verde"
       ],
       "sdd": false,
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "F-01-api",

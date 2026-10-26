@@ -17,6 +17,7 @@ El equipo necesita una base PostgreSQL accesible para todos sin administrar serv
   - El seed es idempotente y los datos de desarrollo llevan el prefijo `DEV-<nombre>-`.
   - NestJS se conecta con un rol propio, `asclepio_app`, **sin `UPDATE`/`DELETE`** sobre `audit_log` y `encounter_events`.
 - Las horas son `timestamptz` en UTC.
+- **Prisma 7** (decisión humana del 2026-10-26): las URLs ya no van en `schema.prisma`. `prisma.config.ts` usa `DIRECT_URL` para el CLI (validate, migrate deploy). En runtime, `PrismaClient` se instancia con `@prisma/adapter-pg` sobre `DATABASE_URL` (pooler 6543). El cliente se genera en `src/generated/prisma` (no versionado).
 
 ## Alternativas descartadas
 - **Supabase Auth/REST:** acoplaría la lógica de autorización y multi-tenant a RLS y a la API de Supabase, fuera del monolito que se prueba en NestJS.

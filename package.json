@@ -1,0 +1,79 @@
+{
+  "name": "asclepio-api",
+  "version": "0.1.0",
+  "description": "Backend de Asclepio — triage de urgencias asistido por IA",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint": "eslint \"{src,test}/**/*.ts\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run -s test:unit && npm run -s test:e2e",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config test/jest-e2e.json",
+    "openapi:export": "nest start --entryFile openapi-export",
+    "prisma:generate": "prisma generate",
+    "ai:eval": "node -e \"console.log('ai:eval: marcador. Se implementa en F-04-api (ver docs/verification.md).')\""
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "testEnvironment": "node",
+    "extensionsToTreatAsEsm": [
+      ".ts"
+    ],
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "transform": {
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "useESM": true
+        }
+      ]
+    },
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.2.0",
+    "@nestjs/core": "^12.2.0",
+    "@nestjs/platform-express": "^12.2.0",
+    "@nestjs/swagger": "^12.0.4",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@nestjs/cli": "^12.0.10",
+    "@nestjs/schematics": "^12.0.10",
+    "@nestjs/testing": "^12.2.0",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.19.2",
+    "@types/supertest": "^7.2.1",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.7",
+    "globals": "^17.13.0",
+    "jest": "^30.5.2",
+    "prettier": "^3.9.10",
+    "prisma": "^7.10.1",
+    "source-map-support": "^0.5.21",
+    "supertest": "^7.3.1",
+    "ts-jest": "^29.4.15",
+    "typescript": "~6.0",
+    "typescript-eslint": "^8.72.1"
+  },
+  "type": "module"
+}

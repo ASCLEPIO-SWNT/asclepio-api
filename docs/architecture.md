@@ -1,25 +1,28 @@
 # Arquitectura — asclepio-api
 
-Monolito modular NestJS + TypeScript estricto (ADR 0001). PostgreSQL en Supabase vía Prisma, en el esquema `asclepio` (ADR 0003).
+Monolito modular NestJS 12 + TypeScript estricto, en ESM (`"type": "module"`, imports relativos con `.js`), con Jest (ts-jest ESM) (ADR 0001). PostgreSQL en Supabase vía Prisma, en el esquema `asclepio` (ADR 0003).
 
 ## Estructura
 ```
 src/
 ├── main.ts                 # bootstrap: prefijo /api/v1, Swagger, filtro problem+json, logger
 ├── app.module.ts
-├── common/                 # transversal: filtros, guards, decoradores, logger, reloj, prisma.service
+├── app.setup.ts            # prefijo, ValidationPipe, filtro problem+json, OpenAPI (compartido con pruebas y export)
+├── openapi-export.ts       # npm run openapi:export
+├── generated/prisma/       # cliente Prisma generado (no versionado)
+├── common/                 # transversal: health, problem+json, y más adelante guards, reloj y prisma.service
 └── modules/
     ├── auth/  users/  tenancy/
     ├── patients/  encounters/  triage/  ai/
     ├── queue/  reports/  audit/
 prisma/
-├── schema.prisma           # datasource con url = DATABASE_URL y directUrl = DIRECT_URL; schemas = ["asclepio"]
+├── schema.prisma           # provider postgresql, schemas = ["asclepio"] (Prisma 7: sin URLs aquí)
 ├── migrations/             # inmutables una vez creadas
 └── seed.ts                 # idempotente (F-09)
 openapi/asclepio-api.v1.json
 ai/prompts/  ai/vignettes/
-scripts/                    # openapi-export, ai-eval
-test/                       # e2e/integración
+prisma.config.ts            # CLI de Prisma: DIRECT_URL (migraciones). Runtime: adapter pg con DATABASE_URL
+test/                       # e2e/integración (Jest)
 ```
 
 ## Módulos y datos

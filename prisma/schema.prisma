@@ -1,0 +1,14 @@
+// Esquema de Asclepio. Las tablas viven en el esquema PostgreSQL "asclepio" (ADR 0003).
+// Sin modelos todavía: cada feature añade los suyos mediante migraciones (ver docs/data-model.md).
+// Prisma 7: las URLs no van aquí. CLI y migraciones → prisma.config.ts (DIRECT_URL);
+// runtime → PrismaClient con @prisma/adapter-pg (DATABASE_URL, pooler 6543).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["asclepio"]
+}
