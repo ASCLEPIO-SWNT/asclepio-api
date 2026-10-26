@@ -1,0 +1,25 @@
+# deps / build
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# env (nunca subir secretos)
+.env
+.env.*
+!.env.example
+
+# logs / temporales
+*.log
+npm-debug.log*
+*.tmp
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Claude Code local
+.claude/settings.local.json

@@ -1,0 +1,207 @@
+{
+  "project": "asclepio-api",
+  "description": "Backend NestJS (monolito modular) de Asclepio y fuente del contrato OpenAPI.",
+  "rules": {
+    "one_feature_per_session": true,
+    "require_tests_to_close": true,
+    "require_approved_spec_to_implement": true,
+    "valid_status": [
+      "pending",
+      "spec_ready",
+      "in_progress",
+      "done",
+      "blocked"
+    ],
+    "sdd_required_when": "feature has \"sdd\": true"
+  },
+  "features": [
+    {
+      "id": "F-00-api",
+      "global_id": "F-00",
+      "name": "bootstrap",
+      "title": "Bootstrap técnico de la API",
+      "description": "Proyecto NestJS estricto, ESLint/Prettier, Jest, Prisma (sin modelos), Swagger /api/v1 + openapi:export, filtro problem+json, GET /health, logs estructurados, ai:eval marcador, carpetas de los 10 módulos.",
+      "depends_on": [],
+      "contract": {
+        "changes": true,
+        "version": null
+      },
+      "touches_db": false,
+      "acceptance": [
+        "GET /api/v1/health responde 200",
+        "npm run openapi:export escribe openapi/asclepio-api.v1.json",
+        "Errores en application/problem+json",
+        "./init.sh completo en verde"
+      ],
+      "sdd": false,
+      "status": "pending"
+    },
+    {
+      "id": "F-01-api",
+      "global_id": "F-01",
+      "name": "auth_roles_tenancy",
+      "title": "Autenticación, roles y tenancy",
+      "description": "Módulos auth, users y tenancy: login JWT, roles, aislamiento por tenant y auditoría de accesos.",
+      "depends_on": [
+        "F-00-api"
+      ],
+      "contract": {
+        "changes": true,
+        "version": null
+      },
+      "touches_db": true,
+      "acceptance": [
+        "Ver docs/product/features/F-01.md (F-01.AC1–AC5)",
+        "Detalle en specs/F-01-api/requirements.md"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": "F-02-api",
+      "global_id": "F-02",
+      "name": "patients_encounters",
+      "title": "Pacientes y atención",
+      "description": "Módulos patients y encounters: búsqueda y alta de pacientes (NN incluido), atención con llegada a la hora del servidor, máquina de estados y línea de tiempo.",
+      "depends_on": [
+        "F-01-api"
+      ],
+      "contract": {
+        "changes": true,
+        "version": null
+      },
+      "touches_db": true,
+      "acceptance": [
+        "Ver docs/product/features/F-02.md (F-02.AC1–AC7)",
+        "Detalle en specs/F-02-api/requirements.md"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": "F-03-api",
+      "global_id": "F-03",
+      "name": "clinical_capture",
+      "title": "Captura clínica",
+      "description": "Signos vitales (solo inserciones), síntomas y hallazgos con validación y eventos.",
+      "depends_on": [
+        "F-02-api"
+      ],
+      "contract": {
+        "changes": true,
+        "version": null
+      },
+      "touches_db": true,
+      "acceptance": [
+        "Ver docs/product/features/F-03.md (F-03.AC1–AC4)",
+        "Detalle en specs/F-03-api/requirements.md"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": "F-04-api",
+      "global_id": "F-04",
+      "name": "ai_suggestion",
+      "title": "Sugerencia por LLM + SafetyGuards + fallback",
+      "description": "Módulo ai: LlmClient (Groq/OpenRouter), prompt versionado, validador, SafetyGuards, TriageAdvisor, persistencia de sugerencias y ai:eval.",
+      "depends_on": [
+        "F-03-api"
+      ],
+      "contract": {
+        "changes": true,
+        "version": null
+      },
+      "touches_db": true,
+      "acceptance": [
+        "Ver docs/product/features/F-04.md (F-04.AC1–AC7, AC9)",
+        "Detalle en specs/F-04-api/requirements.md"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": "F-05-api",
+      "global_id": "F-05",
+      "name": "triage_decision",
+      "title": "Validar o corregir la sugerencia",
+      "description": "Módulo triage: decisión VALIDATE/CORRECT/MANUAL con hora del servidor, responsable, evento y auditoría.",
+      "depends_on": [
+        "F-04-api"
+      ],
+      "contract": {
+        "changes": true,
+        "version": null
+      },
+      "touches_db": true,
+      "acceptance": [
+        "Ver docs/product/features/F-05.md (F-05.AC1–AC6)",
+        "Detalle en specs/F-05-api/requirements.md"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": "F-06-api",
+      "global_id": "F-06",
+      "name": "priority_queue",
+      "title": "Cola priorizada",
+      "description": "Módulo queue: atenciones activas ordenadas por nivel y espera.",
+      "depends_on": [
+        "F-05-api"
+      ],
+      "contract": {
+        "changes": true,
+        "version": null
+      },
+      "touches_db": false,
+      "acceptance": [
+        "Ver docs/product/features/F-06.md (F-06.AC1–AC3, AC5)",
+        "Detalle en specs/F-06-api/requirements.md"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": "F-07-api",
+      "global_id": "F-07",
+      "name": "reports",
+      "title": "Reportes y CSV",
+      "description": "Módulo reports: tiempos, cumplimiento, concordancia, uso de fallback/guards y exportación CSV.",
+      "depends_on": [
+        "F-05-api"
+      ],
+      "contract": {
+        "changes": true,
+        "version": null
+      },
+      "touches_db": false,
+      "acceptance": [
+        "Ver docs/product/features/F-07.md (F-07.AC1–AC5)",
+        "Detalle en specs/F-07-api/requirements.md"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": "F-09-api",
+      "global_id": "F-09",
+      "name": "synthetic_data_demo",
+      "title": "Datos sintéticos y guion de demo",
+      "description": "Seed idempotente con datos DEV- y guion de demo extremo a extremo.",
+      "depends_on": [
+        "F-07-api"
+      ],
+      "contract": {
+        "changes": false,
+        "version": null
+      },
+      "touches_db": true,
+      "acceptance": [
+        "Ver docs/product/features/F-09.md (F-09.AC1–AC5)"
+      ],
+      "sdd": false,
+      "status": "pending"
+    }
+  ]
+}
