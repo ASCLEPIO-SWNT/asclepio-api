@@ -43,7 +43,7 @@ Backend NestJS (monolito modular) de Asclepio, triage de urgencias asistido por 
   - Los cambios de esquema se hacen solo con Prisma Migrate.
   - Contra la base compartida solo se ejecuta `prisma migrate deploy`, y lo decide el humano.
   - Prohibidos: `migrate reset`, `migrate dev` (salvo `--create-only`) y `db push`.
-  - No se editan migraciones existentes.
+  - No se editan migraciones ya versionadas en git; una recién creada con `--create-only` (sin commit) sí se rellena.
   - El seed es idempotente; los datos de desarrollo llevan el prefijo `DEV-<nombre>-`.
   - `audit_log` y `encounter_events` son append-only.
 - Un módulo no accede a las tablas de otro: usa su service.

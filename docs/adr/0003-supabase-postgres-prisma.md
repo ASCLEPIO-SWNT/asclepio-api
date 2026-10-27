@@ -13,7 +13,7 @@ El equipo necesita una base PostgreSQL accesible para todos sin administrar serv
 - Reglas de la base compartida:
   - Los cambios de esquema se hacen **solo con Prisma Migrate**. En la base compartida solo se ejecuta `prisma migrate deploy`.
   - Están **prohibidos** `prisma migrate reset`, `prisma migrate dev` contra la compartida (sí se permite `--create-only` para generar el SQL) y `prisma db push`.
-  - Las migraciones ya creadas no se editan.
+  - Las migraciones ya versionadas en git no se editan. El flujo es crear la migración con `prisma migrate dev --create-only` contra el PostgreSQL local, rellenarla o revisarla, y hacer commit; desde ese momento es inmutable.
   - El seed es idempotente y los datos de desarrollo llevan el prefijo `DEV-<nombre>-`.
   - NestJS se conecta con un rol propio, `asclepio_app`, **sin `UPDATE`/`DELETE`** sobre `audit_log` y `encounter_events`.
 - Las horas son `timestamptz` en UTC.
