@@ -13,9 +13,6 @@ async function bootstrap() {
     logger: new ConsoleLogger({ json: true }),
   });
   configureApp(app);
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
-  });
   SwaggerModule.setup(`${API_PREFIX}/docs`, app, buildOpenApiDocument(app));
   await app.listen(process.env.PORT ?? 3000);
 }

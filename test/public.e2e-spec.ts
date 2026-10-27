@@ -71,6 +71,22 @@ describe('Endpoints públicos (e2e, sin base)', () => {
       },
     );
 
+    it('R39: el 429 expone Retry-After por CORS al origen de la web', async () => {
+      const send = () =>
+        request(app.getHttpServer())
+          .get('/api/v1/public/consent')
+          .set('Origin', 'http://localhost:5173');
+      for (let i = 0; i < 10; i++) await send();
+      const res = await send();
+      expect(res.status).toBe(429);
+      expect(res.headers['access-control-allow-origin']).toBe(
+        'http://localhost:5173',
+      );
+      expect(res.headers['access-control-expose-headers']).toMatch(
+        /retry-after/i,
+      );
+    });
+
     it('R39: el límite es por endpoint (otro endpoint limitado sigue respondiendo) y GET /health queda fuera', async () => {
       for (let i = 0; i < 11; i++) await call('get', '/api/v1/public/consent');
       expect((await call('get', '/api/v1/public/consent')).status).toBe(429);

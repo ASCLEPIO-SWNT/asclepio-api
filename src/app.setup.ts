@@ -20,6 +20,11 @@ export const API_PREFIX = 'api/v1';
 /** Configuración común a main.ts, openapi-export.ts y las pruebas e2e. */
 export function configureApp(app: INestApplication): void {
   app.setGlobalPrefix(API_PREFIX);
+  // Retry-After expuesto para que la web lea la espera tras un 429 (R39 de F-01-api, R7 de F-01-web).
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+    exposedHeaders: ['Retry-After'],
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
