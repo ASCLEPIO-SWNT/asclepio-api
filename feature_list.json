@@ -68,7 +68,7 @@
       ],
       "contract": {
         "changes": true,
-        "version": null
+        "version": "0.3.0"
       },
       "touches_db": true,
       "acceptance": [
@@ -76,7 +76,7 @@
         "Detalle en specs/F-02-api/requirements.md"
       ],
       "sdd": true,
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "id": "F-03-api",

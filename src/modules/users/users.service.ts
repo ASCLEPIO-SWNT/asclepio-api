@@ -64,6 +64,20 @@ export class UsersService {
     });
   }
 
+  /** Nombres del personal del tenant, para el responsable en la línea de tiempo (F-02, R42). */
+  async findNames(
+    tenantId: string,
+    ids: string[],
+  ): Promise<Map<string, string>> {
+    const unique = [...new Set(ids)];
+    if (!unique.length) return new Map();
+    const rows = await this.prisma.user.findMany({
+      where: { tenantId, id: { in: unique } },
+      select: { id: true, fullName: true },
+    });
+    return new Map(rows.map((r) => [r.id, r.fullName]));
+  }
+
   async existsByEmail(email: string): Promise<boolean> {
     const n = await this.prisma.user.count({
       where: { email: normalizeEmail(email) },

@@ -6,7 +6,8 @@ import { PrismaModule } from './common/prisma/prisma.module.js';
 import { ThrottleModule } from './common/throttle/throttle.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
-import { PatientsModule } from './modules/patients/patients.module.js';
+import { EncountersModule } from './modules/encounters/encounters.module.js';
+import { PatientsHttpModule } from './modules/patients/patients.module.js';
 import { TenancyHttpModule } from './modules/tenancy/tenancy.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
@@ -20,8 +21,9 @@ import { UsersModule } from './modules/users/users.module.js';
     AuditModule,
     TenancyHttpModule,
     UsersModule,
-    PatientsModule,
+    PatientsHttpModule,
     AuthModule,
+    EncountersModule,
   ],
   controllers: [HealthController],
 })

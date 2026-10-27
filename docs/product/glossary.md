@@ -6,8 +6,8 @@
 | **Sede** | Lugar físico de una IPS con servicio de urgencias. | `sites` |
 | **Tenant** | Cliente aislado del SaaS (una IPS). Sus datos no se mezclan con los de otro tenant. | `tenants`; casi todas las tablas llevan `tenant_id`. |
 | **Paciente** | Persona atendida. Su documento es único por tenant y es nulo si es NN. | `patients` |
-| **Cuenta de paciente** | Credenciales con las que un paciente usa la app móvil. No es un `user` del personal ni tiene roles de staff (ADR 0008). | Por definir en F-01-api |
-| **Pre-registro** | Solicitud enviada por el paciente desde la app (datos, motivo, sede). No es una atención ni entra en la cola hasta que recepción la confirma. | Por definir en F-02-api |
+| **Cuenta de paciente** | Credenciales con las que un paciente usa la app móvil. No es un `user` del personal ni tiene roles de staff (ADR 0008). | `patient_accounts` (F-01-api; `identity_verified` lo pone recepción al confirmar el primer pre-registro, F-02-api) |
+| **Pre-registro** | Solicitud enviada por el paciente desde la app (datos, motivo, sede). No es una atención ni entra en la cola hasta que recepción la confirma. Expira a las 6 h (estado efectivo `EXPIRED`). | `pre_registrations` (F-02-api) |
 | **NN** | Paciente sin identificar (sin documento). | `patients.document_number = NULL` |
 | **Atención** (*encounter*) | Una visita del paciente a urgencias, desde la llegada hasta el cierre. | `encounters` |
 | **Hora de llegada** | Hora legal de llegada (Res. 373): momento en que **recepción confirma** el pre-registro o registra directamente. Siempre es la hora del servidor. | `encounters.arrival_at` |

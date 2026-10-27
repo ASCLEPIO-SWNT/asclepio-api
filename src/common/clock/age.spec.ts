@@ -1,4 +1,4 @@
-import { FixedClock } from '../../common/clock/clock.js';
+import { FixedClock } from './clock.js';
 import { isAdult } from './age.js';
 
 describe('isAdult (mayoría de edad en America/Bogota)', () => {
@@ -27,5 +27,11 @@ describe('isAdult (mayoría de edad en America/Bogota)', () => {
     ).todayInBogota();
     expect(isAdult('2008-10-27', today)).toBe(false);
     expect(isAdult('2008-10-26', today)).toBe(true);
+  });
+
+  it('R4: el perfil del paciente exige 18 años cumplidos en Bogotá; una fecha futura es menor de edad', () => {
+    expect(isAdult('2008-10-27', '2026-10-26')).toBe(false);
+    expect(isAdult('2030-01-01', '2026-10-26')).toBe(false);
+    expect(isAdult('2008-10-26', '2026-10-26')).toBe(true);
   });
 });

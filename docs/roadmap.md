@@ -43,6 +43,7 @@ Regla entre repos: **primero el contrato**. `F-0X-web` y `F-0X-mobile` no pasan 
 | F-00-mobile | done (2026-10-26) | consume 0.1.0 |
 | F-01-api | done (2026-10-26) | 0.2.1 (0.2.0 + corrección de tipo de `consentVersion`) |
 | F-01-web | done (2026-10-26) | consume 0.2.0 |
+| F-02-api | done (2026-10-27) | 0.3.0 |
 | Todos los demás | pending | — |
 
 ## Trazabilidad F-0X.ACn → R<n>

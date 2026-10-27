@@ -32,6 +32,7 @@ import { TokenService } from './token.service.js';
     // Guard global con denegación por defecto (D4).
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
-  exports: [TokenService],
+  // F-02: encounters usa PatientAccountsService (verificación de identidad e identityVerified de la bandeja).
+  exports: [TokenService, PatientAccountsService],
 })
 export class AuthModule {}

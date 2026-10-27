@@ -10,7 +10,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { STAFF_ROLES, type StaffRole } from '../../../common/auth/principal.js';
-import { IsCalendarDate } from './is-calendar-date.js';
+import { IsCalendarDate } from '../../../common/validation/is-calendar-date.js';
 
 /** Tipos de documento admitidos en la cuenta de paciente: TI y RC quedan fuera (menores, PA-5). */
 export const PATIENT_DOCUMENT_TYPES = ['CC', 'CE', 'PA'] as const;

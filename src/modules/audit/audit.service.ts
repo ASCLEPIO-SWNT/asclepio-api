@@ -11,7 +11,17 @@ export type AuditAction =
   | 'AUTH_ACCOUNT_LOCKED'
   | 'PATIENT_ACCOUNT_CREATED'
   | 'USER_CREATED'
-  | 'SITE_CREATED';
+  | 'SITE_CREATED'
+  // F-02-api
+  | 'PATIENT_CREATED'
+  | 'PATIENT_UPDATED'
+  | 'PATIENT_IDENTITY_VERIFIED'
+  | 'PRE_REGISTRATION_CREATED'
+  | 'PRE_REGISTRATION_EXPIRED'
+  | 'PRE_REGISTRATION_CONFIRMED'
+  | 'PRE_REGISTRATION_REJECTED'
+  | 'ENCOUNTER_CREATED'
+  | 'ENCOUNTER_STATUS_CHANGED';
 
 export type AuditJson =
   string | number | boolean | null | AuditJson[] | { [key: string]: AuditJson };
@@ -44,6 +54,13 @@ const FORBIDDEN_KEYS = new Set([
   'token',
   'accesstoken',
   'refreshtoken',
+  // F-02-api (D16, R41): texto libre clínico o motivos (posibles datos personales) y edad estimada.
+  // 'reason' no se prohíbe: F-01 lo usa para códigos (AUTH_LOGIN_FAILED); F-02 solo guarda reasonProvided.
+  'chiefcomplainttext',
+  'complainttext',
+  'cancellationreason',
+  'rejectionreason',
+  'estimatedageyears',
 ]);
 
 /** Lanza si la metadata contiene (a cualquier profundidad) una clave con datos personales o secretos. */

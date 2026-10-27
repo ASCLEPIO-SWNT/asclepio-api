@@ -38,6 +38,36 @@ export class TenancyService {
     return site;
   }
 
+  /**
+   * Sede del tenant o null si no existe, es de otro tenant o el id no es UUID (F-02, R6, R31).
+   * No lanza: el llamador decide (422 para referencias del cuerpo, D17).
+   */
+  async findSiteInTenant(
+    tenantId: string,
+    id: string,
+    tx?: PrismaTx,
+  ): Promise<{ id: string; name: string } | null> {
+    if (!isUuid(id)) return null;
+    return (tx ?? this.prisma).site.findFirst({
+      where: { id, tenantId },
+      select: { id: true, name: true },
+    });
+  }
+
+  /** Nombres de las sedes del tenant (las de otro tenant no aparecen). */
+  async findSiteNames(
+    tenantId: string,
+    ids: string[],
+  ): Promise<Map<string, string>> {
+    const unique = [...new Set(ids)].filter(isUuid);
+    if (!unique.length) return new Map();
+    const rows = await this.prisma.site.findMany({
+      where: { tenantId, id: { in: unique } },
+      select: { id: true, name: true },
+    });
+    return new Map(rows.map((r) => [r.id, r.name]));
+  }
+
   /** true solo si la IPS existe y está activa. */
   async isActive(tenantId: string, tx?: PrismaTx): Promise<boolean> {
     if (!isUuid(tenantId)) return false;

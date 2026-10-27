@@ -11,7 +11,7 @@ src/
 ├── openapi-export.ts       # npm run openapi:export
 ├── generated/prisma/       # cliente Prisma generado (no versionado)
 ├── common/                 # transversal: health, problem+json, auth (decoradores y tipos de principal),
-│                           # clock (Clock/SystemClock/FixedClock), config (validación al arrancar), prisma, throttle
+│                           # clock (Clock/SystemClock/FixedClock, age), config (validación al arrancar), prisma, throttle, validation
 ├── modules/
 │   ├── auth/  users/  tenancy/
 │   ├── patients/  encounters/  triage/  ai/
@@ -36,8 +36,8 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 | `auth` | Login del personal y del paciente, JWT, guard global (rol y tipo de principal), alta de cuenta de paciente, consentimiento, `GET /me` | `patient_accounts` | `users`, `patients`, `tenancy`, `audit` |
 | `users` | Usuarios y roles | `users` | `tenancy` |
 | `tenancy` | Tenants, sedes y contexto de tenant por petición | `tenants`, `sites` | — |
-| `patients` | Búsqueda y alta de pacientes (en F-01, mínimo: `findByDocument` y `create`) | `patients` | `audit` |
-| `encounters` | Atenciones, máquina de estados, línea de tiempo y captura clínica | `encounters`, `encounter_events`, `vital_signs`, `symptom_findings` | `patients`, `audit` |
+| `patients` | Búsqueda y alta de pacientes (NN y menores) y perfil del paciente en la app (F-02) | `patients` | `audit` |
+| `encounters` | Pre-registros, atenciones, máquina de estados, línea de tiempo y captura clínica | `pre_registrations`, `encounters`, `encounter_events`, `vital_signs`, `symptom_findings` | `patients`, `tenancy`, `auth` (`PatientAccountsService`), `users`, `audit` |
 | `triage` | Decisiones humanas (VALIDATE/CORRECT/MANUAL) | `triage_decisions` | `encounters`, `ai`, `audit` |
 | `ai` | Sugerencia: `LlmClient` (`GroqAdapter`, `OpenRouterAdapter`), `TriagePromptBuilder`, `TriageResponseValidator`, `SafetyGuards`, `TriageAdvisor` | `triage_suggestions` | `encounters` (solo lectura de la captura) |
 | `queue` | Cola priorizada | — | `encounters`, `triage` |
@@ -68,6 +68,14 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 - El tenant sale **solo** del claim `tid` (`@CurrentPrincipal()`); los services que leen datos de una IPS reciben `tenantId` primero y responden 404 igual para "no existe" y "de otro tenant".
 - `@PublicThrottled()` (`common/throttle/`) = `@Public()` + límite de 10 peticiones / 60 s por IP y endpoint (`@nestjs/throttler`, en memoria).
 - `TenancyModule` exporta solo el service (lo usan los scripts CLI); `TenancyHttpModule` añade `GET /public/tenants`.
+
+## Pre-registro y atenciones (F-02)
+- `auth` exporta `PatientAccountsService` (verificación de identidad de la cuenta e `identityVerified` de la bandeja) además de `TokenService`.
+- `PatientsModule` exporta solo el service; `PatientsHttpModule` (solo en `AppModule`) añade `GET/POST /patients` y `GET/PATCH /patient/profile`.
+- `@Throttled()` (`common/throttle/`) = mismo límite que `@PublicThrottled()` pero sin `@Public()`: lo usan `PATCH /patient/profile` y `POST /patient/pre-registrations`.
+- Utilidades transversales movidas a `common/`: `clock/age.ts` (mayoría de edad en Bogotá), `validation/is-calendar-date.ts`, `validation/trimmed-length.ts` y `validation/uuid-param.pipe.ts` (un `{id}` mal formado → 404).
+- `EncountersService.transition(...)` es la transición genérica exportada para F-05/F-06 (UPDATE condicional sobre el estado leído; nunca a `TRIAGED`). `EncounterStateMachine` es una función pura.
+- Rutas del paciente bajo `/patient/…`; el paciente sale solo de `pid` y `tid` del token.
 
 ## Scripts y pruebas
 - `npm run users:create -- --email … --full-name … --role … --tenant …` (contraseña por stdin) y `npm run sites:create -- --tenant … --name …`: compilan y ejecutan `src/scripts/*` con un contexto Nest mínimo (`CliModule`) sobre `DATABASE_URL`. Fuera de `production` exigen el prefijo `DEV-`.

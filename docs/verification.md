@@ -26,6 +26,8 @@
   5. `npm run build` (los scripts CLI se prueban como proceso hijo desde `dist/`) y Jest con `test/jest-int.json` (`test/*.int-spec.ts`), conectado como `asclepio_app`.
   - El contenedor queda levantado para repetir; se detiene con `docker compose -f docker-compose.test.yml down`.
   - Los tenants de prueba (`DEV-test-…-<sufijo>`) no se borran porque `audit_log` los referencia; sí se borran sus usuarios, sedes, pacientes y cuentas.
+- **F-02-api:** las suites de F-02 (`test/f02-*.int-spec.ts`, `test/int/f02-fixtures.ts`) **no borran** sus tenants, sedes, usuarios, pacientes, atenciones ni pre-registros: `asclepio_app` no tiene `DELETE` sobre `encounters`, `pre_registrations` ni `encounter_events`, y las FKs con `RESTRICT` impiden borrar lo que referencian. Usan tenants `DEV-test-…-<sufijo>` propios por ejecución en el PostgreSQL desechable de Docker.
+- **Paso del humano (F-02-api):** aplicar en Supabase las migraciones `f02_patients_encounters` y `f02_app_role_grants` (y las de F-01 si faltan) con `npx prisma migrate deploy` usando su `DIRECT_URL`, solo el responsable de backend y avisando antes y después; después comprobar que `asclepio_app` no tiene `UPDATE`/`DELETE` en `encounter_events`.
 - `npm test` y `./init.sh` **no** necesitan base: las pruebas e2e (`test/*.e2e-spec.ts`) usan la app completa sin `DATABASE_URL` (Prisma conecta de forma perezosa).
 
 ## Alta de personal y sedes (scripts CLI, F-01-api)

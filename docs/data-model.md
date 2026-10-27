@@ -140,7 +140,7 @@ erDiagram
 | tenancy | `tenants`, `sites` |
 | users / auth | `users` |
 | patients | `patients` |
-| encounters | `encounters`, `encounter_events`, `vital_signs`, `symptom_findings` (por confirmar en la spec de F-03) |
+| encounters | `encounters`, `encounter_events`, `pre_registrations` (F-02), `vital_signs`, `symptom_findings` (por confirmar en la spec de F-03) |
 | triage | `triage_decisions` |
 | ai | `triage_suggestions` |
 | audit | `audit_log` |
@@ -174,9 +174,16 @@ Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 - `audit_log`: `actor_type` (`STAFF`, `PATIENT`, `SYSTEM`, nullable) y `actor_id` sin FK; `id` es `BIGSERIAL`. `asclepio_app` solo tiene `SELECT` e `INSERT` (más `USAGE` de `audit_log_id_seq`). La FK `audit_log.tenant_id` es `ON DELETE RESTRICT ON UPDATE RESTRICT` (migración `f01_audit_log_fk_restrict`): una acción referencial `SET NULL`/`CASCADE` se ejecutaría como dueño de la tabla y saltaría los grants. Toda FK futura desde una tabla append-only debe ser `RESTRICT`.
 - El rol `asclepio_app` se crea `NOLOGIN` en la migración; su contraseña y `LOGIN` se fijan fuera de banda (en Docker, `scripts/test-int.sh`).
 
-### App del paciente (ADR 0008) — pendiente de F-02-api
-- `pre_registrations`: `patient_id`, `site_id`, `chief_complaint_text`, `complaint_source`, `pre_registered_at` (servidor), `status` (`PENDING`, `CONFIRMED`, `EXPIRED` a las 6 h, `REJECTED`), `encounter_id` (al confirmar), `confirmed_by`.
-- Al confirmar se crea `encounters` con `arrival_at = now()` del servidor (hora legal) y `status = REGISTERED`.
+### F-02-api (cerrado; migraciones `f02_patients_encounters` y `f02_app_role_grants`)
+- `patients`: añade `estimated_age_years smallint` (solo NN sin fecha de nacimiento, 0–120), `identity_verified_at timestamptz` (hora del servidor en que recepción verificó la identidad o creó el paciente con documento; no NULL → el perfil ya no es editable desde la app) y `updated_at`. CHECK: tipo y número de documento juntos o ninguno (NN); CHECK de la edad estimada. `document_type` admite `CC`, `TI`, `CE`, `PA`, `RC` (validado en la API).
+- `sites`: único `(id, tenant_id)`, destino de las FKs compuestas.
+- `encounters` (dueño `encounters`): `id`, `tenant_id`, `site_id`, `patient_id`, `status` (`encounter_status`), `origin` (`PRE_REGISTRATION`, `DIRECT`), `arrival_at` (servidor, sin default), `chief_complaint_text`, `complaint_source` (`TYPED`, `VOICE_ON_DEVICE`), `registered_by` → `users`, `cancellation_reason`, `created_at`, `updated_at`. FKs compuestas `(patient_id, tenant_id)` y `(site_id, tenant_id)`. Índice único parcial `encounters_one_active_per_patient` (una atención no `CLOSED`/`CANCELLED` por paciente). Se crea directamente en `WAITING_TRIAGE` con dos eventos (`ENCOUNTER_CREATED` → `REGISTERED` y `STATUS_CHANGED` → `WAITING_TRIAGE`). `final_level`, `triaged_at` y `triaged_by` llegan con F-05.
+- `pre_registrations` (dueño `encounters`): `id`, `tenant_id`, `patient_id`, `site_id`, `chief_complaint_text`, `complaint_source`, `status` (`PENDING`, `CONFIRMED`, `EXPIRED`, `REJECTED`), `pre_registered_at` y `expires_at` (= +6 h, servidor), `resolved_at`, `resolved_by` → `users`, `encounter_id` (único; FK compuesta a `encounters`, RESTRICT), `rejection_reason`, `updated_at`. Índice único parcial `pre_registrations_one_pending_per_patient`. CHECK `expires_at > pre_registered_at`.
+- **Expiración perezosa y estado efectivo:** no hay job. Un `PENDING` con `expires_at` ≤ hora del servidor se presenta como `EXPIRED`; solo al crear un pre-registro nuevo se materializan los vencidos del paciente (`resolved_at = expires_at`, auditoría `PRE_REGISTRATION_EXPIRED` del sistema). Los vencidos de pacientes que no vuelven siguen `PENDING` en la base: **F-07 debe usar el estado efectivo**.
+- Al confirmar se crea `encounters` con `arrival_at` = hora del servidor de la confirmación (hora legal); `pre_registered_at` se conserva solo como referencia.
+- `encounter_events` (append-only): `id bigserial`, `tenant_id`, `encounter_id`, `type text`, `from_status`, `to_status`, `payload jsonb` (sin datos personales), `actor_type` (`actor_type`), `actor_id` **sin FK** (CHECK: NULL si y solo si `SYSTEM`), `occurred_at`. FKs `(encounter_id, tenant_id)` y `tenant_id` **`ON DELETE RESTRICT ON UPDATE RESTRICT`**. `asclepio_app`: solo `SELECT`, `INSERT` y `USAGE` de la secuencia.
+- Permisos: `encounters` y `pre_registrations` con `SELECT, INSERT, UPDATE` (sin `DELETE`).
+- Los índices únicos parciales se declaran en el schema (`previewFeatures = ["partialIndexes"]`); el predicado de `encounters_one_active_per_patient` se escribe en la forma canónica de PostgreSQL (`status <> ALL (ARRAY[...])`) para que `migrate diff` no detecte drift.
 
 ### Pendiente (preguntas abiertas)
 - `vital_signs`: ¿columnas tipadas o `jsonb`? Depende de PA-F03-1.

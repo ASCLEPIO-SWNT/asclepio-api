@@ -13,7 +13,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { AuditService } from '../audit/audit.service.js';
 import { PatientsService } from '../patients/patients.service.js';
 import { TenancyService } from '../tenancy/tenancy.service.js';
-import { isAdult } from './age.js';
+import { isAdult } from '../../common/clock/age.js';
 import { ConsentService } from './consent.service.js';
 import type {
   CreatePatientAccountDto,
@@ -191,6 +191,41 @@ export class PatientAccountsService {
         active: true,
       },
     });
+  }
+
+  /**
+   * F-02 (R18, D8): pone identity_verified = true en la cuenta del paciente, solo si estaba en false.
+   * Devuelve null si el paciente no tiene cuenta en ese tenant; changed = false si ya estaba verificada.
+   */
+  async markIdentityVerified(
+    tenantId: string,
+    patientId: string,
+    tx: PrismaTx,
+  ): Promise<{ accountId: string; changed: boolean } | null> {
+    const account = await tx.patientAccount.findFirst({
+      where: { tenantId, patientId },
+      select: { id: true },
+    });
+    if (!account) return null;
+    const { count } = await tx.patientAccount.updateMany({
+      where: { id: account.id, identityVerified: false },
+      data: { identityVerified: true },
+    });
+    return { accountId: account.id, changed: count === 1 };
+  }
+
+  /** identity_verified de la cuenta de cada paciente del tenant (los que no tienen cuenta no aparecen). */
+  async findIdentityFlags(
+    tenantId: string,
+    patientIds: string[],
+  ): Promise<Map<string, boolean>> {
+    const unique = [...new Set(patientIds)];
+    if (!unique.length) return new Map();
+    const rows = await this.prisma.patientAccount.findMany({
+      where: { tenantId, patientId: { in: unique } },
+      select: { patientId: true, identityVerified: true },
+    });
+    return new Map(rows.map((r) => [r.patientId, r.identityVerified]));
   }
 
   async incrementFailedAttempts(id: string, tx: PrismaTx): Promise<number> {

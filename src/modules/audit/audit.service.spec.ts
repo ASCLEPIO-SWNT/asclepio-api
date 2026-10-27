@@ -45,6 +45,33 @@ describe('AuditService', () => {
     ).not.toThrow();
   });
 
+  it('R41: rechaza en metadata el motivo de consulta, los motivos de cancelación y rechazo y la edad estimada; admite fields, isNN, origin y estados', () => {
+    for (const key of [
+      'chiefComplaintText',
+      'chief_complaint_text',
+      'complaintText',
+      'cancellationReason',
+      'rejection_reason',
+      'estimatedAgeYears',
+    ]) {
+      expect(() => assertSafeMetadata({ [key]: 'x' })).toThrow(/metadata/);
+      expect(() => assertSafeMetadata({ nested: { [key]: 'x' } })).toThrow(
+        /metadata/,
+      );
+    }
+    expect(() =>
+      assertSafeMetadata({
+        fields: ['fullName', 'sex'],
+        isNN: true,
+        origin: 'DIRECT',
+        fromStatus: 'WAITING_TRIAGE',
+        toStatus: 'CANCELLED',
+        reasonProvided: true,
+        complaintSource: 'TYPED',
+      }),
+    ).not.toThrow();
+  });
+
   it('R32: record no inserta nada si la metadata trae datos personales', async () => {
     const { svc, calls } = setup();
     await expect(
