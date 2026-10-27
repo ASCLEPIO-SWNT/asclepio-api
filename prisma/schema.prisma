@@ -4,8 +4,10 @@
 // runtime → PrismaClient con @prisma/adapter-pg (DATABASE_URL, pooler 6543).
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  // F-02 (D7): índices únicos parciales declarados en el schema (Prisma >= 7.4, preview) para que no haya drift.
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -51,11 +53,14 @@ model Tenant {
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  sites           Site[]
-  users           User[]
-  patients        Patient[]
-  patientAccounts PatientAccount[]
-  auditLogs       AuditLog[]
+  sites            Site[]
+  users            User[]
+  patients         Patient[]
+  patientAccounts  PatientAccount[]
+  auditLogs        AuditLog[]
+  encounters       Encounter[]
+  preRegistrations PreRegistration[]
+  encounterEvents  EncounterEvent[]
 
   @@map("tenants")
   @@schema("asclepio")
@@ -68,9 +73,12 @@ model Site {
   name      String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  encounters       Encounter[]
+  preRegistrations PreRegistration[]
 
   @@unique([tenantId, name])
+  @@unique([id, tenantId]) // F-02 (D11): destino de las FKs compuestas con el tenant
   @@map("sites")
   @@schema("asclepio")
 }
@@ -89,7 +97,9 @@ model User {
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant                   Tenant            @relation(fields: [tenantId], references: [id])
+  registeredEncounters     Encounter[]
+  resolvedPreRegistrations PreRegistration[]
 
   @@index([tenantId])
   @@map("users")
@@ -97,18 +107,26 @@ model User {
 }
 
 /// Paciente. Dueño: patients. Columnas nullables porque F-02 registra pacientes NN o graves sin todos los datos.
+/// CHECK manuales (migración f02_patients_encounters): documento completo o ausente; edad estimada solo en NN y 0–120.
 model Patient {
-  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId       String      @map("tenant_id") @db.Uuid
-  documentType   String?     @map("document_type")
-  documentNumber String?     @map("document_number")
-  fullName       String?     @map("full_name")
-  birthDate      DateTime?   @map("birth_date") @db.Date
-  sex            PatientSex?
-  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                 String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String      @map("tenant_id") @db.Uuid
+  documentType       String?     @map("document_type")
+  documentNumber     String?     @map("document_number")
+  fullName           String?     @map("full_name")
+  birthDate          DateTime?   @map("birth_date") @db.Date
+  sex                PatientSex?
+  /// Edad estimada en años (solo NN sin fecha de nacimiento, PA-F02-1).
+  estimatedAgeYears  Int?        @map("estimated_age_years") @db.SmallInt
+  /// Hora del servidor en que recepción verificó la identidad (D8). No NULL → el perfil ya no es editable (R3).
+  identityVerifiedAt DateTime?   @map("identity_verified_at") @db.Timestamptz(6)
+  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant   Tenant           @relation(fields: [tenantId], references: [id])
-  accounts PatientAccount[] // como mucho una: patient_accounts.patient_id es único
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  accounts         PatientAccount[] // como mucho una: patient_accounts.patient_id es único
+  encounters       Encounter[]
+  preRegistrations PreRegistration[]
 
   @@unique([tenantId, documentType, documentNumber])
   @@unique([id, tenantId])
@@ -157,5 +175,137 @@ model AuditLog {
 
   @@index([tenantId, occurredAt])
   @@map("audit_log")
+  @@schema("asclepio")
+}
+
+// ---------------------------------------------------------------- F-02: pre-registro y atenciones
+
+enum ComplaintSource {
+  TYPED
+  VOICE_ON_DEVICE
+
+  @@map("complaint_source")
+  @@schema("asclepio")
+}
+
+enum EncounterStatus {
+  REGISTERED
+  WAITING_TRIAGE
+  TRIAGED
+  IN_CARE
+  CLOSED
+  CANCELLED
+
+  @@map("encounter_status")
+  @@schema("asclepio")
+}
+
+enum EncounterOrigin {
+  PRE_REGISTRATION
+  DIRECT
+
+  @@map("encounter_origin")
+  @@schema("asclepio")
+}
+
+enum PreRegistrationStatus {
+  PENDING
+  CONFIRMED
+  EXPIRED
+  REJECTED
+
+  @@map("pre_registration_status")
+  @@schema("asclepio")
+}
+
+/// Atención. Dueño: encounters. Solo se actualiza junto con su encounter_event y su auditoría (misma transacción).
+/// FKs compuestas con el tenant (D11). Como mucho una atención activa por paciente (D7, índice único parcial).
+/// final_level, triaged_at y triaged_by llegan con F-05 (D14).
+model Encounter {
+  id                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String          @map("tenant_id") @db.Uuid
+  siteId             String          @map("site_id") @db.Uuid
+  patientId          String          @map("patient_id") @db.Uuid
+  status             EncounterStatus
+  origin             EncounterOrigin
+  /// Hora legal de llegada (Res. 373, ADR 0008): la pone la API con el Clock; sin default.
+  arrivalAt          DateTime        @map("arrival_at") @db.Timestamptz(6)
+  chiefComplaintText String          @map("chief_complaint_text")
+  complaintSource    ComplaintSource @map("complaint_source")
+  registeredBy       String          @map("registered_by") @db.Uuid
+  cancellationReason String?         @map("cancellation_reason")
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  site             Site              @relation(fields: [siteId, tenantId], references: [id, tenantId])
+  patient          Patient           @relation(fields: [patientId, tenantId], references: [id, tenantId])
+  registeredByUser User              @relation(fields: [registeredBy], references: [id])
+  preRegistrations PreRegistration[] // como mucho uno: pre_registrations.encounter_id es único
+  events           EncounterEvent[]
+
+  @@unique([id, tenantId])
+  @@unique([patientId], map: "encounters_one_active_per_patient", where: raw("status <> ALL (ARRAY['CLOSED'::asclepio.encounter_status, 'CANCELLED'::asclepio.encounter_status])"))
+  @@index([tenantId, arrivalAt(sort: Desc)])
+  @@index([tenantId, status, arrivalAt])
+  @@index([tenantId, patientId])
+  @@map("encounters")
+  @@schema("asclepio")
+}
+
+/// Pre-registro enviado por el paciente desde la app (ADR 0008). Dueño: encounters (D1).
+/// Expiración perezosa (D2): el estado efectivo es EXPIRED si status = PENDING y expires_at <= hora del servidor.
+model PreRegistration {
+  id                 String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String                @map("tenant_id") @db.Uuid
+  patientId          String                @map("patient_id") @db.Uuid
+  siteId             String                @map("site_id") @db.Uuid
+  chiefComplaintText String                @map("chief_complaint_text")
+  complaintSource    ComplaintSource       @map("complaint_source")
+  status             PreRegistrationStatus @default(PENDING)
+  preRegisteredAt    DateTime              @map("pre_registered_at") @db.Timestamptz(6)
+  expiresAt          DateTime              @map("expires_at") @db.Timestamptz(6)
+  resolvedAt         DateTime?             @map("resolved_at") @db.Timestamptz(6)
+  resolvedBy         String?               @map("resolved_by") @db.Uuid
+  encounterId        String?               @unique @map("encounter_id") @db.Uuid
+  rejectionReason    String?               @map("rejection_reason")
+  updatedAt          DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant         Tenant     @relation(fields: [tenantId], references: [id])
+  patient        Patient    @relation(fields: [patientId, tenantId], references: [id, tenantId])
+  site           Site       @relation(fields: [siteId, tenantId], references: [id, tenantId])
+  resolvedByUser User?      @relation(fields: [resolvedBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  // MATCH SIMPLE: no se comprueba mientras encounter_id es NULL. Restrict: nunca SET NULL sobre tenant_id (NOT NULL).
+  encounter      Encounter? @relation(fields: [encounterId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([patientId], map: "pre_registrations_one_pending_per_patient", where: raw("status = 'PENDING'"))
+  @@index([tenantId, status, expiresAt])
+  @@index([patientId, preRegisteredAt(sort: Desc)])
+  @@map("pre_registrations")
+  @@schema("asclepio")
+}
+
+/// Línea de tiempo append-only de la atención (RNF-02). Dueño: encounters. asclepio_app solo tiene SELECT e INSERT.
+/// actor_id sin FK (D10); payload sin datos personales (R41). Todas sus FKs son RESTRICT (D12).
+model EncounterEvent {
+  id          BigInt           @id @default(autoincrement())
+  tenantId    String           @map("tenant_id") @db.Uuid
+  encounterId String           @map("encounter_id") @db.Uuid
+  /// ENCOUNTER_CREATED | STATUS_CHANGED (texto, D15: cada feature añade tipos sin ALTER TYPE).
+  type        String
+  fromStatus  EncounterStatus? @map("from_status")
+  toStatus    EncounterStatus? @map("to_status")
+  payload     Json             @default("{}")
+  actorType   ActorType        @map("actor_type")
+  actorId     String?          @map("actor_id") @db.Uuid
+  occurredAt  DateTime         @map("occurred_at") @db.Timestamptz(6)
+
+  // Restrict (no SET NULL/CASCADE): las acciones referenciales se ejecutan como dueño de la tabla y saltarían los grants append-only.
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  encounter Encounter @relation(fields: [encounterId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([encounterId, occurredAt, id])
+  @@index([tenantId, occurredAt])
+  @@map("encounter_events")
   @@schema("asclepio")
 }
