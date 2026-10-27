@@ -47,7 +47,7 @@ Mientras se hace el triage, Asclepio registra los tiempos (llegada, clasificaci�
 
 ## 5. Flujo de un turno
 
-1. **Recepción** (app móvil) registra al paciente y la atención; el motivo de consulta se puede dictar.
+1. **Paciente** (app móvil, en su teléfono) inicia sesión y envía un pre-registro con sus datos y su motivo, que puede dictar. **Recepción** (web) verifica su identidad y confirma la llegada; esa es la hora legal. También registra directamente a quien no use la app (ADR 0008).
 2. **IA** sugiere el nivel I–V y explica por qué.
 3. **Enfermería** (web) valida o corrige. La decisión final es suya.
 4. **Médico y administración** (web) ven la cola priorizada y los reportes de tiempos y cumplimiento.
@@ -58,7 +58,8 @@ Mientras se hace el triage, Asclepio registra los tiempos (llegada, clasificaci�
 
 | Rol (sistema) | Qué hace |
 |---|---|
-| Recepción (`RECEPTION`) | Registra al paciente y la atención; dicta el motivo. |
+| Paciente (cuenta de paciente, app móvil) | Se pre-registra con sus datos y su motivo (escrito o dictado). |
+| Recepción (`RECEPTION`) | Confirma los pre-registros y registra directamente a quien no use la app (web). |
 | Enfermería de triage (`NURSE`) | Revisa la sugerencia; valida o corrige. |
 | Médico de urgencias (`PHYSICIAN`) | Consulta la cola priorizada. |
 | Administración (`ADMIN`) | Consulta tiempos y cumplimiento; exporta reportes. |
@@ -78,7 +79,7 @@ Arquitectura de **una sugerencia de IA, unas reglas deterministas de seguridad y
 
 El payload que se envía al LLM **nunca** incluye nombre ni documento del paciente. Las correcciones de enfermería quedan registradas para auditar el modelo.
 
-Stack: backend NestJS (monolito modular), PostgreSQL en Supabase con Prisma, web React + Vite, móvil Kotlin + Compose. Todo corre en local; no hay despliegue por ahora (ADR 0001–0003, 0007).
+Stack: backend NestJS (monolito modular), PostgreSQL en Supabase con Prisma, web React + Vite (personal) y móvil Kotlin + Compose (paciente, ADR 0008). Todo corre en local; no hay despliegue por ahora (ADR 0001–0003, 0007).
 
 ## 7. Evidencia y medición
 

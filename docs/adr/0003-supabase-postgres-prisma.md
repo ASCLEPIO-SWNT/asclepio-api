@@ -28,4 +28,5 @@ El equipo necesita una base PostgreSQL accesible para todos sin administrar serv
 - Hooks del harness bloquean los comandos destructivos y la edición de migraciones existentes.
 - Los permisos de `asclepio_app` se crean en una migración SQL (se definirá en la primera feature que toque la base).
 - `init.sh` nunca escribe en la base.
-- **Pregunta abierta:** quién ejecuta `migrate deploy` sobre la compartida y cómo se coordina (por ejemplo, un responsable por semana).
+- **Coordinación (humano, 2026-10-26):** solo el **responsable de backend** ejecuta `prisma migrate deploy` sobre la base compartida y avisa al equipo antes y después.
+- **Pruebas de integración (humano, 2026-10-26):** se ejecutan contra un **PostgreSQL local o desechable (Docker)**, nunca contra Supabase. Supabase se reserva para desarrollo compartido y la demo.

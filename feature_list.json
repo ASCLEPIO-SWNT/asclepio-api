@@ -41,7 +41,7 @@
       "global_id": "F-01",
       "name": "auth_roles_tenancy",
       "title": "Autenticación, roles y tenancy",
-      "description": "Módulos auth, users y tenancy: login JWT, roles, aislamiento por tenant y auditoría de accesos.",
+      "description": "Módulos auth, users y tenancy: login JWT del personal y de pacientes (principales separados, ADR 0008), roles, aislamiento por tenant y auditoría de accesos.",
       "depends_on": [
         "F-00-api"
       ],
@@ -51,7 +51,7 @@
       },
       "touches_db": true,
       "acceptance": [
-        "Ver docs/product/features/F-01.md (F-01.AC1–AC5)",
+        "Ver docs/product/features/F-01.md (F-01.AC1–AC5, AC7–AC8)",
         "Detalle en specs/F-01-api/requirements.md"
       ],
       "sdd": true,
@@ -62,7 +62,7 @@
       "global_id": "F-02",
       "name": "patients_encounters",
       "title": "Pacientes y atención",
-      "description": "Módulos patients y encounters: búsqueda y alta de pacientes (NN incluido), atención con llegada a la hora del servidor, máquina de estados y línea de tiempo.",
+      "description": "Módulos patients y encounters: pre-registro del paciente, confirmación o registro directo por recepción (llegada legal = hora del servidor al confirmar), NN, máquina de estados y línea de tiempo.",
       "depends_on": [
         "F-01-api"
       ],
@@ -72,7 +72,7 @@
       },
       "touches_db": true,
       "acceptance": [
-        "Ver docs/product/features/F-02.md (F-02.AC1–AC7)",
+        "Ver docs/product/features/F-02.md (F-02.AC1–AC10)",
         "Detalle en specs/F-02-api/requirements.md"
       ],
       "sdd": true,

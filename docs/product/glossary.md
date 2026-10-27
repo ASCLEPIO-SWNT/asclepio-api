@@ -6,9 +6,11 @@
 | **Sede** | Lugar físico de una IPS con servicio de urgencias. | `sites` |
 | **Tenant** | Cliente aislado del SaaS (una IPS). Sus datos no se mezclan con los de otro tenant. | `tenants`; casi todas las tablas llevan `tenant_id`. |
 | **Paciente** | Persona atendida. Su documento es único por tenant y es nulo si es NN. | `patients` |
+| **Cuenta de paciente** | Credenciales con las que un paciente usa la app móvil. No es un `user` del personal ni tiene roles de staff (ADR 0008). | Por definir en F-01-api |
+| **Pre-registro** | Solicitud enviada por el paciente desde la app (datos, motivo, sede). No es una atención ni entra en la cola hasta que recepción la confirma. | Por definir en F-02-api |
 | **NN** | Paciente sin identificar (sin documento). | `patients.document_number = NULL` |
 | **Atención** (*encounter*) | Una visita del paciente a urgencias, desde la llegada hasta el cierre. | `encounters` |
-| **Hora de llegada** | Momento en que se registra la atención. Siempre es la hora del servidor. | `encounters.arrival_at` |
+| **Hora de llegada** | Hora legal de llegada (Res. 373): momento en que **recepción confirma** el pre-registro o registra directamente. Siempre es la hora del servidor. | `encounters.arrival_at` |
 | **Motivo de consulta** | Texto libre con la razón de la visita. | `encounters.chief_complaint_text` |
 | **Fuente del motivo** | Cómo se capturó el motivo: escrito o dictado en el dispositivo. | `complaint_source` (`TYPED`, `VOICE_ON_DEVICE`) |
 | **Signos vitales** | Mediciones fisiológicas (FC, PA, SatO₂, FR, temperatura, etc.). Solo se insertan; una nueva medición no sobrescribe la anterior. | `vital_signs` |

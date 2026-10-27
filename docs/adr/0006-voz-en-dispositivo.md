@@ -4,7 +4,7 @@
 - **Fecha:** 2026-10-26
 
 ## Contexto
-Dictar el motivo de consulta ahorra tiempo a recepción. El audio de un paciente es un dato sensible y enviarlo a un servicio de ASR en la nube (por ejemplo, Whisper) aumenta la superficie de privacidad y el costo.
+Dictar el motivo de consulta facilita el pre-registro: desde el ADR 0008 lo dicta el **paciente** en su propio teléfono. El audio de un paciente es un dato sensible y enviarlo a un servicio de ASR en la nube (por ejemplo, Whisper) aumenta la superficie de privacidad y el costo.
 
 ## Decisión
 - La transcripción usa **`SpeechRecognizer` de Android en modo local**, comprobando en tiempo de ejecución que haya reconocimiento local en español disponible.
@@ -18,5 +18,5 @@ Dictar el motivo de consulta ahorra tiempo a recepción. El audio de un paciente
 - **Dictado en la web (Web Speech API):** en Chrome envía el audio a servidores de Google, y la web no es el canal de admisión.
 
 ## Consecuencias
-- La disponibilidad depende del dispositivo y de la versión de Android (el `minSdk` se documenta en un ADR del repo móvil).
+- La disponibilidad depende del dispositivo y de la versión de Android (el `minSdk` se documenta en un ADR del repo móvil). Con teléfonos de pacientes el parque es heterogéneo, así que el fallback a texto será frecuente.
 - La API no maneja audio.

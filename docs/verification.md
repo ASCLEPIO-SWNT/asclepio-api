@@ -17,7 +17,7 @@
 ## Pruebas de integración contra la base
 - Solo con datos de prueba prefijados (`DEV-<nombre>-test-…`), que se limpian al terminar. La limpieza nunca toca `audit_log` ni `encounter_events`: las pruebas usan un tenant de prueba propio y sus filas quedan, porque son append-only.
 - Nunca `migrate reset`, `db push` ni `TRUNCATE`.
-- **Pregunta abierta:** si las pruebas de integración usan la base compartida o un PostgreSQL local o desechable. Se decide en la primera feature que toque la base.
+- **Decisión (humano, 2026-10-26):** las pruebas de integración usan un **PostgreSQL local o desechable (Docker)**, con su propia `DATABASE_URL` de pruebas. Nunca usan Supabase. La primera feature que toque la base define el `docker compose` y el script de pruebas.
 
 ## Componentes de IA
 - `TriageResponseValidator` y `SafetyGuards`: pruebas **sin mocks del LLM**, con respuestas JSON literales y entradas clínicas sintéticas.

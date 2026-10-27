@@ -8,7 +8,7 @@ Mapa de las features globales `F-0X` a sus slices por repo. El **estado vivo** d
 |---|---|---|---|---|---|---|
 | F-00 | Bootstrap técnico del repo | F-00-api | F-00-web | F-00-mobile | no | — |
 | F-01 | Autenticación, roles y tenancy | F-01-api | F-01-web | F-01-mobile | sí | [F-01](product/features/F-01.md) |
-| F-02 | Pacientes y atención (llegada con hora del servidor) | F-02-api | F-02-web (consulta) | F-02-mobile | sí | [F-02](product/features/F-02.md) |
+| F-02 | Pre-registro del paciente y confirmación de llegada (hora del servidor) | F-02-api | F-02-web (confirmación + consulta) | F-02-mobile (pre-registro) | sí | [F-02](product/features/F-02.md) |
 | F-03 | Captura clínica | F-03-api | F-03-web | — | sí | [F-03](product/features/F-03.md) |
 | F-04 | Sugerencia por LLM + SafetyGuards + fallback manual | F-04-api | F-04-web | — | sí | [F-04](product/features/F-04.md) |
 | F-05 | Validar o corregir la sugerencia | F-05-api | F-05-web | — | sí | [F-05](product/features/F-05.md) |
@@ -57,7 +57,9 @@ No se implementa nada que dependa de estas preguntas hasta que se respondan. El 
 
 | ID | Tema | Bloquea |
 |---|---|---|
-| PA-F01-1..4 | Duración del token, política de contraseñas, multi-rol, roles en el móvil | F-01 |
+| ~~PA-F01-1..3~~ | Resueltas el 2026-10-26 (JWT de 8 h sin refresh; contraseña ≥ 10 y bloqueo de 15 min tras 5 intentos; un rol y un tenant por usuario) | — |
+| ~~PA-F01-4~~ | Resuelta en el ADR 0008: el móvil lo usa el **paciente** en su teléfono, con cuenta propia; recepción confirma en la web; la llegada legal es la confirmación | — |
+| PA-PAC-1..6 | Método de login del paciente, elección de sede, expiración del pre-registro, qué ve el paciente, consentimiento (Ley 1581), menores (ver ADR 0008) | F-01-api, F-02-api, F-01/F-02-mobile |
 | PA-F02-1..4 | Datos mínimos del paciente, transiciones de estado y quién las hace | F-02 |
 | PA-F03-1..4 | Lista de signos vitales, **rangos fisiológicos**, catálogo de síntomas | F-03 |
 | PA-F04-1 | **Reglas y umbrales de los SafetyGuards** (asesor clínico) | F-04 |
@@ -67,4 +69,5 @@ No se implementa nada que dependa de estas preguntas hasta que se respondan. El 
 | PA-F07-1..4 | **Formato oficial Res. 373 / SISPRO**, tipo de kappa, métricas, documento en el CSV | F-07 |
 | PA-F08-1..2 | Texto editado tras el dictado, dispositivos objetivo | F-08 |
 | PA-F09-1 | Volumen de los datos de demo | F-09 |
-| PA-ADR3 | Quién ejecuta `migrate deploy` sobre la base compartida | Primera migración |
+| ~~PA-ADR3~~ | Resuelta el 2026-10-26: solo el responsable de backend ejecuta `migrate deploy` en la base compartida y avisa al equipo | — |
+| ~~PA-TEST~~ | Resuelta el 2026-10-26: las pruebas de integración usan PostgreSQL local (Docker); Supabase solo para desarrollo y demo | — |
