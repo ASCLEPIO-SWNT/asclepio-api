@@ -61,6 +61,8 @@ model Tenant {
   encounters       Encounter[]
   preRegistrations PreRegistration[]
   encounterEvents  EncounterEvent[]
+  vitalSigns       VitalSign[]
+  symptomFindings  SymptomFinding[]
 
   @@map("tenants")
   @@schema("asclepio")
@@ -100,6 +102,8 @@ model User {
   tenant                   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   registeredEncounters     Encounter[]
   resolvedPreRegistrations PreRegistration[]
+  recordedVitalSigns       VitalSign[]
+  recordedSymptomFindings  SymptomFinding[]
 
   @@index([tenantId])
   @@map("users")
@@ -245,6 +249,8 @@ model Encounter {
   registeredByUser User              @relation(fields: [registeredBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
   preRegistrations PreRegistration[] // como mucho uno: pre_registrations.encounter_id es único
   events           EncounterEvent[]
+  vitalSigns       VitalSign[]
+  symptomFindings  SymptomFinding[]
 
   @@unique([id, tenantId])
   @@unique([patientId], map: "encounters_one_active_per_patient", where: raw("status <> ALL (ARRAY['CLOSED'::asclepio.encounter_status, 'CANCELLED'::asclepio.encounter_status])"))
@@ -310,5 +316,84 @@ model EncounterEvent {
   @@index([encounterId, occurredAt, id])
   @@index([tenantId, occurredAt])
   @@map("encounter_events")
+  @@schema("asclepio")
+}
+
+// ---------------------------------------------------------------- F-03: captura clínica
+
+/// Nivel de conciencia ACVPU (PA-F03-1, NEWS2 RCP 2017). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.
+enum ConsciousnessLevel {
+  A
+  C
+  V
+  P
+  U
+
+  @@map("consciousness_level")
+  @@schema("asclepio")
+}
+
+/// Tipo de hallazgo (PA-F03-3): SYMPTOM = lo que refiere el paciente, FINDING = lo que observa enfermería,
+/// COMPLAINT_NOTE = precisión del motivo de consulta (PA-F03-4).
+enum SymptomFindingKind {
+  SYMPTOM
+  FINDING
+  COMPLAINT_NOTE
+
+  @@map("symptom_finding_kind")
+  @@schema("asclepio")
+}
+
+/// Toma de signos vitales: una fila por toma, solo inserciones (asclepio_app: SELECT e INSERT). Dueño: encounters (D1).
+/// Las columnas de signos son NULL en la base (D2): la obligatoriedad y los rangos viven en VITAL_SIGN_DEFINITIONS.
+/// CHECK manual (migración f03_clinical_capture): al menos un signo.
+model VitalSign {
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String              @map("tenant_id") @db.Uuid
+  encounterId        String              @map("encounter_id") @db.Uuid
+  respiratoryRate    Int?                @map("respiratory_rate") @db.SmallInt
+  oxygenSaturation   Int?                @map("oxygen_saturation") @db.SmallInt
+  supplementalOxygen Boolean?            @map("supplemental_oxygen")
+  systolicBp         Int?                @map("systolic_bp") @db.SmallInt
+  heartRate          Int?                @map("heart_rate") @db.SmallInt
+  consciousness      ConsciousnessLevel?
+  temperatureC       Decimal?            @map("temperature_c") @db.Decimal(4, 1)
+  diastolicBp        Int?                @map("diastolic_bp") @db.SmallInt
+  glucoseMgDl        Int?                @map("glucose_mg_dl") @db.SmallInt
+  /// Hora del servidor (Clock, D10); sin default.
+  recordedAt         DateTime            @map("recorded_at") @db.Timestamptz(6)
+  recordedBy         String              @map("recorded_by") @db.Uuid
+
+  // D13: todas RESTRICT (las acciones referenciales se ejecutan como dueño y saltarían los grants append-only).
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  encounter      Encounter @relation(fields: [encounterId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+  recordedByUser User      @relation(fields: [recordedBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([encounterId, recordedAt, id])
+  @@index([tenantId, recordedAt])
+  @@map("vital_signs")
+  @@schema("asclepio")
+}
+
+/// Síntoma, hallazgo o nota del motivo: una fila por elemento, solo inserciones (asclepio_app: SELECT e INSERT).
+/// Texto libre estructurado (PA-F03-3), sin catálogo ni code. CHECK manual: description de 1 a 500 sin espacios extremos.
+model SymptomFinding {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String             @map("tenant_id") @db.Uuid
+  encounterId String             @map("encounter_id") @db.Uuid
+  kind        SymptomFindingKind
+  description String
+  /// Hora del servidor (Clock, D10); sin default.
+  recordedAt  DateTime           @map("recorded_at") @db.Timestamptz(6)
+  recordedBy  String             @map("recorded_by") @db.Uuid
+
+  // D13: todas RESTRICT.
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  encounter      Encounter @relation(fields: [encounterId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+  recordedByUser User      @relation(fields: [recordedBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([encounterId, recordedAt, id])
+  @@index([tenantId, recordedAt])
+  @@map("symptom_findings")
   @@schema("asclepio")
 }
