@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -25,8 +26,8 @@ describe('Endpoints públicos (e2e, sin base)', () => {
         'version',
       ]);
       expect(res.body).toMatchObject({ version: '2026-10-v1' });
-      expect((res.body as { text: string }).text).toContain(
-        'Texto pendiente de redacción por el equipo. No válido legalmente.',
+      expect((res.body as { text: string }).text).toBe(
+        readFileSync('docs/legal/consentimiento.md', 'utf8'),
       );
     });
   });

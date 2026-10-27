@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AppConfig } from '../../common/config/app-config.js';
@@ -34,8 +34,8 @@ describe('ConsentService', () => {
 
   it('R38: por defecto lee docs/legal/consentimiento.md desde la raíz del repo', () => {
     const svc = new ConsentService(config('docs/legal/consentimiento.md'));
-    expect(svc.current().text).toContain(
-      'Texto pendiente de redacción por el equipo. No válido legalmente.',
+    expect(svc.current().text).toBe(
+      readFileSync('docs/legal/consentimiento.md', 'utf8'),
     );
   });
 
