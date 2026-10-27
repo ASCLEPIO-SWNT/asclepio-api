@@ -9,11 +9,12 @@ import {
   OpenAPIObject,
   SwaggerModule,
 } from '@nestjs/swagger';
+import { BEARER_SCHEME } from './common/auth/decorators.js';
 import { ProblemDetailsFilter } from './common/problem/problem-details.filter.js';
 import { ProblemDetailsDto } from './common/problem/problem-details.dto.js';
 
 /** Versión semver del contrato publicado en openapi/asclepio-api.v1.json (ADR 0007). */
-export const API_CONTRACT_VERSION = '0.1.0';
+export const API_CONTRACT_VERSION = '0.2.0';
 export const API_PREFIX = 'api/v1';
 
 /** Configuración común a main.ts, openapi-export.ts y las pruebas e2e. */
@@ -28,9 +29,11 @@ export function configureApp(app: INestApplication): void {
         new BadRequestException({
           detail: 'La petición no superó la validación.',
           errors: errors.flatMap((e) =>
-            Object.values(e.constraints ?? {}).map((message) => ({
+            Object.entries(e.constraints ?? {}).map(([rule, message]) => ({
               field: e.property,
-              message,
+              // El nombre de un campo no declarado lo elige el cliente: no se repite en el mensaje (R36).
+              message:
+                rule === 'whitelistValidation' ? 'Campo no admitido.' : message,
             })),
           ),
         }),
@@ -46,6 +49,11 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
       'Triage de urgencias asistido por IA. La IA propone, el profesional decide.',
     )
     .setVersion(API_CONTRACT_VERSION)
+    // JWT de acceso (F-01): personal (aud asclepio-staff) o paciente (aud asclepio-patient).
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      BEARER_SCHEME,
+    )
     .build();
   const doc = SwaggerModule.createDocument(app, config, {
     extraModels: [ProblemDetailsDto],
@@ -62,8 +70,17 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   for (const path of Object.values(doc.paths)) {
     for (const op of Object.values(path)) {
       if (op && typeof op === 'object' && 'responses' in op) {
-        (op as { responses: Record<string, unknown> }).responses.default ??=
-          problem;
+        const o = op as {
+          responses: Record<string, unknown>;
+          security?: Record<string, string[]>[];
+        };
+        o.responses.default ??= problem;
+        // @StaffRoles() y @PatientOnly() declaran cada uno el esquema bearer: se deja una sola entrada.
+        if (o.security) {
+          o.security = [
+            ...new Map(o.security.map((s) => [JSON.stringify(s), s])).values(),
+          ];
+        }
       }
     }
   }

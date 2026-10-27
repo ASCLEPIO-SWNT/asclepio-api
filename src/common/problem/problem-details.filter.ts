@@ -72,6 +72,12 @@ export function toProblem(
     else if (Array.isArray(detail)) problem.detail = detail.join('; ');
     if (Array.isArray(b.errors)) problem.errors = b.errors;
   }
+  // R36: un 400 que no viene del ValidationPipe (p. ej. JSON mal formado del body-parser) puede repetir trozos
+  // del cuerpo enviado en su mensaje: se sustituye por un texto fijo.
+  const fromValidation = !!body && typeof body === 'object' && 'detail' in body;
+  if (status === 400 && !fromValidation) {
+    problem.detail = 'La petición está mal formada.';
+  }
   if (status >= 500) problem.detail = 'Error interno.';
   return problem;
 }

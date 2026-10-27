@@ -17,7 +17,21 @@
 ## Pruebas de integración contra la base
 - Solo con datos de prueba prefijados (`DEV-<nombre>-test-…`), que se limpian al terminar. La limpieza nunca toca `audit_log` ni `encounter_events`: las pruebas usan un tenant de prueba propio y sus filas quedan, porque son append-only.
 - Nunca `migrate reset`, `db push` ni `TRUNCATE`.
-- **Decisión (humano, 2026-10-26):** las pruebas de integración usan un **PostgreSQL local o desechable (Docker)**, con su propia `DATABASE_URL` de pruebas. Nunca usan Supabase. La primera feature que toque la base define el `docker compose` y el script de pruebas.
+- **Decisión (humano, 2026-10-26):** las pruebas de integración usan un **PostgreSQL local o desechable (Docker)**, con su propia `DATABASE_URL` de pruebas. Nunca usan Supabase.
+- **Cómo (F-01-api):** `npm run test:int` (`scripts/test-int.sh`):
+  1. Comprueba con `scripts/assert-local-db.mjs` que `TEST_DIRECT_URL` y `TEST_DATABASE_URL` apuntan a `localhost`/`127.0.0.1` (por defecto, las de `docker-compose.test.yml`); si no, aborta. **No lee `.env`.**
+  2. `docker compose -f docker-compose.test.yml up -d --wait` (PostgreSQL 17 en `127.0.0.1:54329`, credenciales ficticias).
+  3. `prisma migrate deploy` con `DIRECT_URL` local fijada en la línea de comandos.
+  4. Da `LOGIN` y contraseña local a `asclepio_app` (solo en Docker).
+  5. `npm run build` (los scripts CLI se prueban como proceso hijo desde `dist/`) y Jest con `test/jest-int.json` (`test/*.int-spec.ts`), conectado como `asclepio_app`.
+  - El contenedor queda levantado para repetir; se detiene con `docker compose -f docker-compose.test.yml down`.
+  - Los tenants de prueba (`DEV-test-…-<sufijo>`) no se borran porque `audit_log` los referencia; sí se borran sus usuarios, sedes, pacientes y cuentas.
+- `npm test` y `./init.sh` **no** necesitan base: las pruebas e2e (`test/*.e2e-spec.ts`) usan la app completa sin `DATABASE_URL` (Prisma conecta de forma perezosa).
+
+## Alta de personal y sedes (scripts CLI, F-01-api)
+- `npm run users:create -- --email <email> --full-name DEV-<nombre> --role <RECEPTION|NURSE|PHYSICIAN|ADMIN> --tenant DEV-<IPS>`; la contraseña (10–128 caracteres) se lee por la entrada estándar, sin eco. Idempotente por email.
+- `npm run sites:create -- --tenant DEV-<IPS> --name DEV-<sede>`. Idempotente por IPS y nombre.
+- Ambos crean la IPS si no existe, auditan (`USER_CREATED` / `SITE_CREATED`, actor `SYSTEM`) y, mientras `NODE_ENV` no sea `production`, exigen el prefijo `DEV-`. Usan `DATABASE_URL` (de `.env` o del entorno).
 
 ## Componentes de IA
 - `TriageResponseValidator` y `SafetyGuards`: pruebas **sin mocks del LLM**, con respuestas JSON literales y entradas clínicas sintéticas.

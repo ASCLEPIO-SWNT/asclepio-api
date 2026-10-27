@@ -22,13 +22,14 @@ erDiagram
 
   tenants {
     uuid id PK
-    text name
+    text name "único"
+    bool active
     timestamptz created_at
   }
   sites {
     uuid id PK
     uuid tenant_id FK
-    text name
+    text name "único por tenant"
   }
   users {
     uuid id PK
@@ -38,6 +39,8 @@ erDiagram
     text full_name
     enum role "RECEPTION|NURSE|PHYSICIAN|ADMIN"
     bool active
+    int failed_attempts
+    timestamptz locked_until
   }
   patients {
     uuid id PK
@@ -46,7 +49,7 @@ erDiagram
     text document_number "único por tenant; NULL si NN"
     text full_name
     date birth_date
-    text sex
+    enum sex "M|F|X"
   }
   encounters {
     uuid id PK
@@ -115,7 +118,8 @@ erDiagram
   audit_log {
     bigint id PK
     uuid tenant_id FK
-    uuid actor_id FK
+    enum actor_type "STAFF|PATIENT|SYSTEM"
+    uuid actor_id "sin FK
     text action
     text entity
     text entity_id
@@ -162,8 +166,15 @@ Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 - `triage_suggestions.input_snapshot` y el payload al LLM no contienen `full_name` ni `document_number` (RNF-04).
 - `encounter_events.payload` y `audit_log.metadata` no contienen datos personales (RNF-05).
 
-### App del paciente (ADR 0008) — propuesta, se cierra en las specs de F-01-api y F-02-api
-- `patient_accounts`: credenciales del paciente (`patient_id`; el login es el documento del paciente; `password_hash`, `consent_at`, `consent_version`, `failed_attempts`, `locked_until`, `active`). Es un principal separado de `users` y no se admiten menores.
+### F-01-api (cerrado; migraciones `f01_auth_tenancy` y `f01_app_role_grants`)
+- `tenants`: `name` único y `active` (una IPS inactiva no aparece en `GET /public/tenants`, no admite altas y su personal y pacientes no pueden iniciar sesión).
+- `users`: email único global guardado en minúsculas; `failed_attempts` y `locked_until` para el bloqueo (5 fallos → 15 min).
+- `patients`: `sex` es el enum `patient_sex` (`M`, `F`, `X`); `document_type` es `text` (F-02 admitirá `TI`/`RC`); columnas nullables para NN; único `(tenant_id, document_type, document_number)` y único `(id, tenant_id)`.
+- `patient_accounts` (dueño: `auth`): `id`, `tenant_id`, `patient_id` (único; FK compuesta `(patient_id, tenant_id)` → `patients(id, tenant_id)`), `password_hash` (scrypt), `consent_at` (servidor), `consent_version`, `identity_verified` (false hasta que recepción verifique en F-02), `active`, `failed_attempts`, `locked_until`, `created_at`, `updated_at`. Una cuenta por documento y tenant. Es un principal separado de `users`; no se admiten menores.
+- `audit_log`: `actor_type` (`STAFF`, `PATIENT`, `SYSTEM`, nullable) y `actor_id` sin FK; `id` es `BIGSERIAL`. `asclepio_app` solo tiene `SELECT` e `INSERT` (más `USAGE` de `audit_log_id_seq`). La FK `audit_log.tenant_id` es `ON DELETE RESTRICT ON UPDATE RESTRICT` (migración `f01_audit_log_fk_restrict`): una acción referencial `SET NULL`/`CASCADE` se ejecutaría como dueño de la tabla y saltaría los grants. Toda FK futura desde una tabla append-only debe ser `RESTRICT`.
+- El rol `asclepio_app` se crea `NOLOGIN` en la migración; su contraseña y `LOGIN` se fijan fuera de banda (en Docker, `scripts/test-int.sh`).
+
+### App del paciente (ADR 0008) — pendiente de F-02-api
 - `pre_registrations`: `patient_id`, `site_id`, `chief_complaint_text`, `complaint_source`, `pre_registered_at` (servidor), `status` (`PENDING`, `CONFIRMED`, `EXPIRED` a las 6 h, `REJECTED`), `encounter_id` (al confirmar), `confirmed_by`.
 - Al confirmar se crea `encounters` con `arrival_at = now()` del servidor (hora legal) y `status = REGISTERED`.
 

@@ -41,6 +41,7 @@ Regla entre repos: **primero el contrato**. `F-0X-web` y `F-0X-mobile` no pasan 
 | F-00-api | done (2026-10-26) | 0.1.0 |
 | F-00-web | done (2026-10-26) | consume 0.1.0 |
 | F-00-mobile | done (2026-10-26) | consume 0.1.0 |
+| F-01-api | done (2026-10-26) | 0.2.0 |
 | Todos los demás | pending | — |
 
 ## Trazabilidad F-0X.ACn → R<n>
@@ -49,7 +50,13 @@ Cada spec (`specs/<id>/requirements.md`) traza sus `R<n>` a los criterios global
 
 | Criterio global | Slice | Requisitos | Prueba(s) |
 |---|---|---|---|
-| — | — | — | — |
+| F-01.AC1 | F-01-api | R1, R2, R4–R7, R19, R36 | `R<n>:` en `src/modules/auth/*.spec.ts`, `test/*.e2e-spec.ts` y `test/int/*.int-spec.ts` |
+| F-01.AC2 | F-01-api | R1, R11, R14, R17, R40–R43, R48–R51 | ídem |
+| F-01.AC3 | F-01-api | R8–R11, R36 | ídem |
+| F-01.AC4 | F-01-api | R15, R16 | ídem |
+| F-01.AC5 | F-01-api | R27–R35 | ídem |
+| F-01.AC7 | F-01-api | R3–R7, R12, R13, R18–R20, R23–R25, R37, R39, R44–R47 | ídem |
+| F-01.AC8 | F-01-api | R20–R22, R26, R31, R38 | ídem |
 
 ## Preguntas abiertas (consolidado)
 

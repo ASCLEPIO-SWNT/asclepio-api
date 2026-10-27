@@ -39,4 +39,17 @@ describe('toProblem', () => {
       toProblem(new ServiceUnavailableException('host db-interna:5432')),
     ).toMatchObject({ status: 503, detail: 'Error interno.' });
   });
+
+  it('R36: un 400 del body-parser no repite el cuerpo enviado por el cliente', () => {
+    const p = toProblem(
+      new BadRequestException(
+        'Unexpected token \'j\', "{"email": juan.perez@x.co}" is not valid JSON',
+      ),
+    );
+    expect(p).toMatchObject({
+      status: 400,
+      detail: 'La petición está mal formada.',
+    });
+    expect(JSON.stringify(p)).not.toContain('juan');
+  });
 });

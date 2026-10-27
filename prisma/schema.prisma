@@ -1,5 +1,5 @@
 // Esquema de Asclepio. Las tablas viven en el esquema PostgreSQL "asclepio" (ADR 0003).
-// Sin modelos todavía: cada feature añade los suyos mediante migraciones (ver docs/data-model.md).
+// Cada feature añade sus modelos mediante migraciones nuevas (ver docs/data-model.md).
 // Prisma 7: las URLs no van aquí. CLI y migraciones → prisma.config.ts (DIRECT_URL);
 // runtime → PrismaClient con @prisma/adapter-pg (DATABASE_URL, pooler 6543).
 
@@ -11,4 +11,151 @@ generator client {
 datasource db {
   provider = "postgresql"
   schemas  = ["asclepio"]
+}
+
+// ---------------------------------------------------------------- F-01: auth, roles y tenancy
+
+enum UserRole {
+  RECEPTION
+  NURSE
+  PHYSICIAN
+  ADMIN
+
+  @@map("user_role")
+  @@schema("asclepio")
+}
+
+enum ActorType {
+  STAFF
+  PATIENT
+  SYSTEM
+
+  @@map("actor_type")
+  @@schema("asclepio")
+}
+
+/// Valores de sexo admitidos (PA-5, confirmados por el humano el 2026-10-26).
+enum PatientSex {
+  M
+  F
+  X
+
+  @@map("patient_sex")
+  @@schema("asclepio")
+}
+
+/// IPS (tenant). Dueño: tenancy.
+model Tenant {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  sites           Site[]
+  users           User[]
+  patients        Patient[]
+  patientAccounts PatientAccount[]
+  auditLogs       AuditLog[]
+
+  @@map("tenants")
+  @@schema("asclepio")
+}
+
+/// Sede de una IPS. Dueño: tenancy.
+model Site {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, name])
+  @@map("sites")
+  @@schema("asclepio")
+}
+
+/// Personal. Dueño: users. Email único global y guardado en minúsculas (D7).
+model User {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  email          String    @unique
+  passwordHash   String    @map("password_hash")
+  fullName       String    @map("full_name")
+  role           UserRole
+  active         Boolean   @default(true)
+  failedAttempts Int       @default(0) @map("failed_attempts")
+  lockedUntil    DateTime? @map("locked_until") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@map("users")
+  @@schema("asclepio")
+}
+
+/// Paciente. Dueño: patients. Columnas nullables porque F-02 registra pacientes NN o graves sin todos los datos.
+model Patient {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String      @map("tenant_id") @db.Uuid
+  documentType   String?     @map("document_type")
+  documentNumber String?     @map("document_number")
+  fullName       String?     @map("full_name")
+  birthDate      DateTime?   @map("birth_date") @db.Date
+  sex            PatientSex?
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id])
+  accounts PatientAccount[] // como mucho una: patient_accounts.patient_id es único
+
+  @@unique([tenantId, documentType, documentNumber])
+  @@unique([id, tenantId])
+  @@map("patients")
+  @@schema("asclepio")
+}
+
+/// Cuenta de paciente (principal separado de users, ADR 0008). Dueño: auth.
+/// FK compuesta (patient_id, tenant_id) → patients(id, tenant_id): la cuenta no puede cruzar tenants.
+model PatientAccount {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  patientId        String    @unique @map("patient_id") @db.Uuid
+  passwordHash     String    @map("password_hash")
+  consentAt        DateTime  @map("consent_at") @db.Timestamptz(6)
+  consentVersion   String    @map("consent_version")
+  identityVerified Boolean   @default(false) @map("identity_verified")
+  active           Boolean   @default(true)
+  failedAttempts   Int       @default(0) @map("failed_attempts")
+  lockedUntil      DateTime? @map("locked_until") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  patient Patient @relation(fields: [patientId, tenantId], references: [id, tenantId])
+
+  @@map("patient_accounts")
+  @@schema("asclepio")
+}
+
+/// Auditoría append-only (RNF-02). Dueño: audit. asclepio_app solo tiene SELECT e INSERT (migración f01_app_role_grants).
+/// actor_id sin FK (D12): el actor puede ser un users, una patient_accounts, el sistema o nadie (fallos de login).
+model AuditLog {
+  id         BigInt     @id @default(autoincrement())
+  tenantId   String?    @map("tenant_id") @db.Uuid
+  actorType  ActorType? @map("actor_type")
+  actorId    String?    @map("actor_id") @db.Uuid
+  action     String
+  entity     String
+  entityId   String?    @map("entity_id")
+  metadata   Json       @default("{}")
+  occurredAt DateTime   @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  // Restrict (no SET NULL/CASCADE): las acciones referenciales se ejecutan como dueño de la tabla y saltarían los grants append-only.
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, occurredAt])
+  @@map("audit_log")
+  @@schema("asclepio")
 }

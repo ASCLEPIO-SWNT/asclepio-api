@@ -1,0 +1,16 @@
+# PostgreSQL LOCAL y desechable para las pruebas de integración (npm run test:int, D15 de F-01-api).
+# Credenciales ficticias de desarrollo: esta base nunca contiene datos reales. Nunca se usa Supabase en pruebas.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: asclepio_test
+      POSTGRES_PASSWORD: asclepio_test_local
+      POSTGRES_DB: asclepio_test
+    ports:
+      - '127.0.0.1:54329:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U asclepio_test -d asclepio_test']
+      interval: 2s
+      timeout: 3s
+      retries: 30
