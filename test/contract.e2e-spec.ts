@@ -2,9 +2,10 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { buildOpenApiDocument } from '../src/app.setup.js';
+import { VITAL_SIGN_DEFINITIONS } from '../src/modules/encounters/vital-signs.rules.js';
 import { createApp } from './e2e-app.js';
 
-describe('Contrato OpenAPI 0.3.x (e2e, sin base)', () => {
+describe('Contrato OpenAPI 0.4.x (e2e, sin base)', () => {
   let app: INestApplication<App>;
   beforeAll(async () => {
     app = await createApp();
@@ -20,6 +21,9 @@ describe('Contrato OpenAPI 0.3.x (e2e, sin base)', () => {
       '/api/v1/encounters',
       '/api/v1/encounters/{id}',
       '/api/v1/encounters/{id}/cancel',
+      '/api/v1/encounters/{id}/clinical-capture',
+      '/api/v1/encounters/{id}/symptom-findings',
+      '/api/v1/encounters/{id}/vital-signs',
       '/api/v1/health',
       '/api/v1/me',
       '/api/v1/patient/pre-registrations',
@@ -73,9 +77,8 @@ describe('Contrato OpenAPI 0.3.x (e2e, sin base)', () => {
     expect(doc.paths['/api/v1/health'].get?.responses['429']).toBeUndefined();
   });
 
-  it('R45: info.version es 0.3.0 y los 14 endpoints de F-02 declaran el esquema bearer', () => {
+  it('R45: los 14 endpoints de F-02 declaran el esquema bearer', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.3.0');
     const ops = [
       doc.paths['/api/v1/patient/profile'].get,
       doc.paths['/api/v1/patient/profile'].patch,
@@ -93,6 +96,107 @@ describe('Contrato OpenAPI 0.3.x (e2e, sin base)', () => {
       doc.paths['/api/v1/encounters/{id}/cancel'].post,
     ];
     for (const op of ops) expect(op?.security).toEqual([{ bearer: [] }]);
+  });
+
+  it('R21: info.version es 0.4.0 y los tres endpoints de F-03 declaran el esquema bearer y sus respuestas', () => {
+    const doc = buildOpenApiDocument(app);
+    expect(doc.info.version).toBe('0.4.0');
+    const vs = doc.paths['/api/v1/encounters/{id}/vital-signs'].post;
+    const sf = doc.paths['/api/v1/encounters/{id}/symptom-findings'].post;
+    const cc = doc.paths['/api/v1/encounters/{id}/clinical-capture'].get;
+    for (const op of [vs, sf, cc])
+      expect(op?.security).toEqual([{ bearer: [] }]);
+    expect(vs?.responses['201']).toBeDefined();
+    expect(sf?.responses['201']).toBeDefined();
+    expect(cc?.responses['200']).toBeDefined();
+  });
+
+  it('R22: los endpoints de F-03 declaran los errores como application/problem+json', () => {
+    const doc = buildOpenApiDocument(app);
+    for (const op of [
+      doc.paths['/api/v1/encounters/{id}/vital-signs'].post,
+      doc.paths['/api/v1/encounters/{id}/symptom-findings'].post,
+      doc.paths['/api/v1/encounters/{id}/clinical-capture'].get,
+    ]) {
+      expect(op?.responses.default).toMatchObject({
+        content: { 'application/problem+json': expect.any(Object) as object },
+      });
+    }
+  });
+
+  it('R3: CreateVitalSignsDto documenta los siete obligatorios como required y la unidad y el rango de cada signo leídos de VITAL_SIGN_DEFINITIONS, marcados como provisionales', () => {
+    const doc = buildOpenApiDocument(app);
+    const schemas = doc.components?.schemas as Record<
+      string,
+      {
+        required?: string[];
+        properties?: Record<
+          string,
+          {
+            type?: string;
+            minimum?: number;
+            maximum?: number;
+            description?: string;
+            nullable?: boolean;
+          }
+        >;
+      }
+    >;
+    const req = schemas.CreateVitalSignsDto;
+    expect([...(req.required ?? [])].sort()).toEqual(
+      VITAL_SIGN_DEFINITIONS.filter((d) => d.required)
+        .map((d) => d.field)
+        .sort(),
+    );
+    for (const d of VITAL_SIGN_DEFINITIONS) {
+      const prop = req.properties![d.field];
+      expect(prop.description).toContain('PROVISIONAL');
+      if (d.min !== undefined) {
+        expect([d.field, prop.minimum, prop.maximum]).toEqual([
+          d.field,
+          d.min,
+          d.max,
+        ]);
+        expect(prop.type).toBe(d.type === 'integer' ? 'integer' : 'number');
+        expect(prop.description).toContain(d.unit!);
+      }
+    }
+    expect(JSON.stringify(req.properties!.consciousness)).toContain(
+      '#/components/schemas/ConsciousnessLevel',
+    );
+    expect(schemas.ConsciousnessLevel).toMatchObject({
+      enum: ['A', 'C', 'V', 'P', 'U'],
+    });
+    expect(schemas.SymptomFindingKind).toMatchObject({
+      enum: ['SYMPTOM', 'FINDING', 'COMPLAINT_NOTE'],
+    });
+    expect(schemas.VitalSignsDto.properties!.diastolicBp.nullable).toBe(true);
+    for (const name of ['CreateVitalSignsDto', 'CreateSymptomFindingsDto']) {
+      const props = Object.keys(schemas[name].properties ?? {});
+      for (const banned of [
+        'recordedAt',
+        'recordedBy',
+        'tenantId',
+        'encounterId',
+        'id',
+        'createdAt',
+      ]) {
+        expect([name, props.includes(banned)]).toEqual([name, false]);
+      }
+    }
+  });
+
+  it('R17: EncounterEventDto.type documenta VITAL_SIGNS_RECORDED y SYMPTOM_FINDINGS_RECORDED', () => {
+    const doc = buildOpenApiDocument(app);
+    const ev = doc.components?.schemas?.EncounterEventDto as {
+      properties: Record<string, { enum?: string[] }>;
+    };
+    expect(ev.properties.type.enum).toEqual(
+      expect.arrayContaining([
+        'VITAL_SIGNS_RECORDED',
+        'SYMPTOM_FINDINGS_RECORDED',
+      ]),
+    );
   });
 
   it('R14: PATCH /patient/profile y POST /patient/pre-registrations documentan 429 problem+json con Retry-After', () => {

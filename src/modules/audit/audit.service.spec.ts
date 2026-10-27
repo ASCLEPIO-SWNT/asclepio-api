@@ -72,6 +72,45 @@ describe('AuditService', () => {
     ).not.toThrow();
   });
 
+  it('R18: rechaza en metadata y payload los nueve signos vitales, sus variantes genéricas, description, values, vitalSigns y findings; admite vitalSignsId, findingIds, count y encounterId', () => {
+    for (const key of [
+      'respiratoryRate',
+      'oxygenSaturation',
+      'supplementalOxygen',
+      'systolicBp',
+      'heartRate',
+      'consciousness',
+      'temperatureC',
+      'diastolicBp',
+      'glucoseMgDl',
+      'respiratory_rate',
+      'temperature_c',
+      'glucose_mg_dl',
+      'spo2',
+      'SpO2',
+      'temperature',
+      'glucose',
+      'description',
+      'values',
+      'vitalSigns',
+      'vital_signs',
+      'findings',
+    ]) {
+      expect(() => assertSafeMetadata({ [key]: 1 })).toThrow(/metadata/);
+      expect(() => assertSafeMetadata({ nested: [{ [key]: 1 }] })).toThrow(
+        /metadata/,
+      );
+    }
+    expect(() =>
+      assertSafeMetadata({
+        vitalSignsId: '6f1c1d2e-0000-4000-8000-000000000000',
+        findingIds: ['6f1c1d2e-0000-4000-8000-000000000001'],
+        count: 2,
+        encounterId: '6f1c1d2e-0000-4000-8000-000000000002',
+      }),
+    ).not.toThrow();
+  });
+
   it('R32: record no inserta nada si la metadata trae datos personales', async () => {
     const { svc, calls } = setup();
     await expect(

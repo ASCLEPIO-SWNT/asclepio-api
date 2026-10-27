@@ -43,6 +43,8 @@ const INVALID_TRANSITION =
 const TRIAGED_FORBIDDEN =
   'El paso a TRIAGED exige una decisión de triage y no se hace con la transición genérica.';
 const BAD_REFERENCE = 'El paciente o la sede indicados no están disponibles.';
+const NOT_WAITING_TRIAGE =
+  'La atención no está en espera de triage: no admite captura clínica.';
 
 const ACTIVE_STATUSES = { notIn: ['CLOSED', 'CANCELLED'] as EncounterStatus[] };
 
@@ -295,6 +297,47 @@ export class EncountersService {
       tx,
     );
     return { from, to };
+  }
+
+  /**
+   * Bloqueo de la atención durante una captura clínica de F-03 (D5): UPDATE condicional de updated_at (hora del
+   * servidor) sobre la atención del tenant en WAITING_TRIAGE, dentro de la transacción de la captura. La fila queda
+   * bloqueada hasta el commit, así que una cancelación concurrente espera, y si la cancelación se confirmó antes, el
+   * UPDATE no encuentra la fila en WAITING_TRIAGE (R11). 0 filas → 404 si no existe en el tenant (R12) o 409 (R11).
+   * El evento de la captura (VITAL_SIGNS_RECORDED o SYMPTOM_FINDINGS_RECORDED) va en la misma transacción.
+   * No modifica chief_complaint_text ni complaint_source (R10).
+   */
+  async lockForCapture(
+    tenantId: string,
+    id: string,
+    now: Date,
+    tx: PrismaTx,
+  ): Promise<void> {
+    if (!isUuid(id)) throw new NotFoundException(NOT_FOUND);
+    const { count } = await tx.encounter.updateMany({
+      where: { id, tenantId, status: 'WAITING_TRIAGE' },
+      data: { updatedAt: now },
+    });
+    if (count === 1) return;
+    const exists = await tx.encounter.count({ where: { id, tenantId } });
+    if (!exists) throw new NotFoundException(NOT_FOUND);
+    throw new ConflictException(NOT_WAITING_TRIAGE);
+  }
+
+  /** Motivo de consulta y estado de la atención del tenant para GET /clinical-capture (R20); null si no existe. */
+  findCaptureHeader(
+    tenantId: string,
+    id: string,
+  ): Promise<{
+    status: EncounterStatus;
+    chiefComplaintText: string;
+    complaintSource: ComplaintSource;
+  } | null> {
+    if (!isUuid(id)) return Promise.resolve(null);
+    return this.prisma.encounter.findFirst({
+      where: { id, tenantId },
+      select: { status: true, chiefComplaintText: true, complaintSource: true },
+    });
   }
 
   /** POST /encounters/{id}/cancel (R35, R36): motivo en encounters.cancellation_reason, nunca en eventos ni auditoría. */

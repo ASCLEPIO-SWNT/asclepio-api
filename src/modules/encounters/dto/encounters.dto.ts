@@ -200,7 +200,17 @@ export class EventActorDto {
 
 export class EncounterEventDto {
   @ApiProperty({ description: 'bigint serializado como texto.' }) id: string;
-  @ApiProperty({ enum: ['ENCOUNTER_CREATED', 'STATUS_CHANGED'] }) type: string;
+  @ApiProperty({
+    enum: [
+      'ENCOUNTER_CREATED',
+      'STATUS_CHANGED',
+      'VITAL_SIGNS_RECORDED',
+      'SYMPTOM_FINDINGS_RECORDED',
+    ],
+    description:
+      'Tipo de evento. F-02: ENCOUNTER_CREATED, STATUS_CHANGED. F-03: VITAL_SIGNS_RECORDED (payload { vitalSignsId }) y SYMPTOM_FINDINGS_RECORDED (payload { findingIds, count }), sin fromStatus/toStatus ni valores clínicos. Las features siguientes añaden tipos: los clientes deben tolerar tipos desconocidos.',
+  })
+  type: string;
   @ApiProperty({ enum: ENCOUNTER_STATUSES, type: String, nullable: true })
   fromStatus: EncounterStatus | null;
   @ApiProperty({ enum: ENCOUNTER_STATUSES, type: String, nullable: true })

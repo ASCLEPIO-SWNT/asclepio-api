@@ -66,16 +66,19 @@ erDiagram
   }
   vital_signs {
     uuid id PK
+    uuid tenant_id FK
     uuid encounter_id FK
-    jsonb_or_columns values "FC, PA, SatO2, FR, T..."
-    timestamptz recorded_at
+    smallint_or_numeric signs "una columna tipada por signo (PA-F03-1)"
+    timestamptz recorded_at "hora del servidor"
     uuid recorded_by FK
   }
   symptom_findings {
     uuid id PK
+    uuid tenant_id FK
     uuid encounter_id FK
-    text code_or_text
-    timestamptz recorded_at
+    enum kind "SYMPTOM|FINDING|COMPLAINT_NOTE (PA-F03-3)"
+    text description
+    timestamptz recorded_at "hora del servidor"
     uuid recorded_by FK
   }
   triage_suggestions {
@@ -131,45 +134,54 @@ erDiagram
 ## Reglas
 
 ### Multi-tenant
+
 - Toda tabla con datos de una IPS lleva `tenant_id`, directo o heredado de `encounters`. Todas las consultas filtran por el tenant del usuario autenticado (RNF-11).
 - Hay un índice único `(tenant_id, document_type, document_number)` en `patients`; NULL está permitido para los NN, que pueden repetirse.
 
 ### Propiedad por módulo (ADR 0001)
-| Módulo | Tablas propias |
-|---|---|
-| tenancy | `tenants`, `sites` |
-| users / auth | `users` |
-| patients | `patients` |
-| encounters | `encounters`, `encounter_events`, `pre_registrations` (F-02), `vital_signs`, `symptom_findings` (por confirmar en la spec de F-03) |
-| triage | `triage_decisions` |
-| ai | `triage_suggestions` |
-| audit | `audit_log` |
-| queue, reports | Ninguna; leen mediante services. |
+
+| Módulo         | Tablas propias                                                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| tenancy        | `tenants`, `sites`                                                                                                                     |
+| users / auth   | `users`                                                                                                                                |
+| patients       | `patients`                                                                                                                             |
+| encounters     | `encounters`, `encounter_events`, `pre_registrations` (F-02), `vital_signs`, `symptom_findings` (F-03, D1 de specs/F-03-api/design.md) |
+| triage         | `triage_decisions`                                                                                                                     |
+| ai             | `triage_suggestions`                                                                                                                   |
+| audit          | `audit_log`                                                                                                                            |
+| queue, reports | Ninguna; leen mediante services.                                                                                                       |
 
 ### Inmutabilidad
+
 - `audit_log` y `encounter_events`: **solo inserciones**. El rol `asclepio_app` tiene `INSERT` y `SELECT`, sin `UPDATE` ni `DELETE` (los grants van en una migración SQL).
 - `vital_signs`, `symptom_findings`, `triage_suggestions` y `triage_decisions`: solo inserciones desde la aplicación. Una nueva medición es una nueva fila.
 - `encounters`: es la única tabla clínica que se actualiza (estado, `final_level`, `triaged_at`, `triaged_by`), siempre junto con un `encounter_event` en la misma transacción.
 
 ### Claves foráneas
+
 - **Todas las FK del esquema son `ON DELETE RESTRICT ON UPDATE RESTRICT`** (migraciones `f01_audit_log_fk_restrict` y `f02_fk_on_update_restrict`). Una FK con `CASCADE` o `SET NULL` permitiría modificar atenciones o tablas append-only sin evento ni auditoría. Toda migración nueva debe declarar `onDelete: Restrict, onUpdate: Restrict` en Prisma y revisarse con `--create-only`.
 
 ### Tiempo
+
 - Todas las horas son `timestamptz` en UTC y se asignan **en el servidor** (`now()` o el reloj de la API), nunca desde el cliente (RNF-10).
 - La UI las muestra en `America/Bogota`. Los reportes interpretan los rangos de fechas en `America/Bogota`.
 
 ### Máquina de estados de `encounters`
+
 ```
 REGISTERED → WAITING_TRIAGE → TRIAGED → IN_CARE → CLOSED
      └──────────────┴────────────┴─────────┴──→ CANCELLED
 ```
+
 Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 
 ### Privacidad
+
 - `triage_suggestions.input_snapshot` y el payload al LLM no contienen `full_name` ni `document_number` (RNF-04).
 - `encounter_events.payload` y `audit_log.metadata` no contienen datos personales (RNF-05).
 
 ### F-01-api (cerrado; migraciones `f01_auth_tenancy` y `f01_app_role_grants`)
+
 - `tenants`: `name` único y `active` (una IPS inactiva no aparece en `GET /public/tenants`, no admite altas y su personal y pacientes no pueden iniciar sesión).
 - `users`: email único global guardado en minúsculas; `failed_attempts` y `locked_until` para el bloqueo (5 fallos → 15 min).
 - `patients`: `sex` es el enum `patient_sex` (`M`, `F`, `X`); `document_type` es `text` (F-02 admitirá `TI`/`RC`); columnas nullables para NN; único `(tenant_id, document_type, document_number)` y único `(id, tenant_id)`.
@@ -178,6 +190,7 @@ Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 - El rol `asclepio_app` se crea `NOLOGIN` en la migración; su contraseña y `LOGIN` se fijan fuera de banda (en Docker, `scripts/test-int.sh`).
 
 ### F-02-api (cerrado; migraciones `f02_patients_encounters` y `f02_app_role_grants`)
+
 - `patients`: añade `estimated_age_years smallint` (solo NN sin fecha de nacimiento, 0–120), `identity_verified_at timestamptz` (hora del servidor en que recepción verificó la identidad o creó el paciente con documento; no NULL → el perfil ya no es editable desde la app) y `updated_at`. CHECK: tipo y número de documento juntos o ninguno (NN); CHECK de la edad estimada. `document_type` admite `CC`, `TI`, `CE`, `PA`, `RC` (validado en la API).
 - `sites`: único `(id, tenant_id)`, destino de las FKs compuestas.
 - `encounters` (dueño `encounters`): `id`, `tenant_id`, `site_id`, `patient_id`, `status` (`encounter_status`), `origin` (`PRE_REGISTRATION`, `DIRECT`), `arrival_at` (servidor, sin default), `chief_complaint_text`, `complaint_source` (`TYPED`, `VOICE_ON_DEVICE`), `registered_by` → `users`, `cancellation_reason`, `created_at`, `updated_at`. FKs compuestas `(patient_id, tenant_id)` y `(site_id, tenant_id)`. Índice único parcial `encounters_one_active_per_patient` (una atención no `CLOSED`/`CANCELLED` por paciente). Se crea directamente en `WAITING_TRIAGE` con dos eventos (`ENCOUNTER_CREATED` → `REGISTERED` y `STATUS_CHANGED` → `WAITING_TRIAGE`). `final_level`, `triaged_at` y `triaged_by` llegan con F-05.
@@ -188,7 +201,17 @@ Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 - Permisos: `encounters` y `pre_registrations` con `SELECT, INSERT, UPDATE` (sin `DELETE`).
 - Los índices únicos parciales se declaran en el schema (`previewFeatures = ["partialIndexes"]`); el predicado de `encounters_one_active_per_patient` se escribe en la forma canónica de PostgreSQL (`status <> ALL (ARRAY[...])`) para que `migrate diff` no detecte drift.
 
+### F-03-api (cerrado; migraciones `f03_clinical_capture` y `f03_app_role_grants`; PA-F03-1..4 resueltas el 2026-10-27)
+
+- **Dueño:** `encounters` (la captura se escribe en la misma transacción que su `encounter_event` y se valida contra el estado de la atención). `triage` no tiene tablas de captura.
+- `vital_signs`: **columnas tipadas**, una fila por toma: `tenant_id`, `encounter_id`, `respiratory_rate`, `oxygen_saturation`, `systolic_bp`, `heart_rate`, `diastolic_bp`, `glucose_mg_dl` (`smallint`), `supplemental_oxygen boolean`, `consciousness` (enum `consciousness_level`: `A`, `C`, `V`, `P`, `U`), `temperature_c numeric(4,1)`, `recorded_at` y `recorded_by`. Las columnas de signos son NULL en la base: la obligatoriedad (siete obligatorios en cada toma, diastólica y glucometría opcionales; PA-F03-1, NEWS2 RCP 2017) y los rangos (PA-F03-2) viven en la API (`VITAL_SIGN_DEFINITIONS`), no en CHECK de la base; ambos son **PROVISIONALES — no validados clínicamente, revisar con asesor clínico**. CHECK técnico de al menos un signo. Se descarta `jsonb` (admite claves no previstas y obliga a leer JSON en F-04 y F-07).
+- `symptom_findings`: **texto libre estructurado** (PA-F03-3): `kind` (`SYMPTOM`, `FINDING`, `COMPLAINT_NOTE`) y `description` (1–500), máximo 20 por captura. Sin catálogo ni `code`.
+- Motivo de consulta (PA-F03-4): `encounters.chief_complaint_text` no se modifica; las precisiones de enfermería son filas `COMPLAINT_NOTE`.
+- Ambas tablas: solo `SELECT` e `INSERT` para `asclepio_app`; FKs `(encounter_id, tenant_id) → encounters`, `tenant_id → tenants` y `recorded_by → users`, todas `ON DELETE RESTRICT ON UPDATE RESTRICT`. Eventos `VITAL_SIGNS_RECORDED` y `SYMPTOM_FINDINGS_RECORDED` sin valores clínicos en `payload` ni en `metadata`.
+- CHECK técnicos (bloque manual de `f03_clinical_capture`): `vital_signs_at_least_one_sign` (`num_nonnulls(<signos>) >= 1`) y `symptom_findings_description_length` (`char_length(btrim(description))` entre 1 y 500; la API guarda la descripción sin espacios extremos). Índices `(encounter_id, recorded_at, id)` y `(tenant_id, recorded_at)` en ambas tablas. Ids `uuid` (sin secuencias).
+- La captura bloquea la atención con un UPDATE de `encounters.updated_at` (hora del servidor) en la misma transacción que su `encounter_event`; el estado no cambia.
+
 ### Pendiente (preguntas abiertas)
-- `vital_signs`: ¿columnas tipadas o `jsonb`? Depende de PA-F03-1.
-- `symptom_findings`: ¿catálogo o texto? Depende de PA-F03-3.
+
+- Validación clínica de la lista de signos y de los rangos provisionales de F-03 por un asesor clínico.
 - `complaint_source`: el prompt fija `VOICE_ON_DEVICE`; `TYPED` es el valor propuesto para el texto escrito.

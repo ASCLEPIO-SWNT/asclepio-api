@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   INestApplication,
+  type ValidationError,
   ValidationPipe,
 } from '@nestjs/common';
 import {
@@ -14,8 +15,44 @@ import { ProblemDetailsFilter } from './common/problem/problem-details.filter.js
 import { ProblemDetailsDto } from './common/problem/problem-details.dto.js';
 
 /** Versión semver del contrato publicado en openapi/asclepio-api.v1.json (ADR 0007). */
-export const API_CONTRACT_VERSION = '0.3.0';
+export const API_CONTRACT_VERSION = '0.4.0';
 export const API_PREFIX = 'api/v1';
+
+/**
+ * Aplana los errores de class-validator a { field, message }. Los anidados (F-03: items[] de los hallazgos) llevan la
+ * ruta con puntos ("items.0.kind"). El nombre de un campo no declarado lo elige el cliente: no se repite en el
+ * mensaje (R36 de F-01, R22 de F-03).
+ */
+function flattenErrors(
+  errors: ValidationError[],
+  prefix = '',
+): { field: string; message: string }[] {
+  return errors.flatMap((e) => {
+    const field = prefix + e.property;
+    return [
+      ...Object.entries(e.constraints ?? {}).map(([rule, message]) => ({
+        field,
+        message:
+          rule === 'whitelistValidation' ? 'Campo no admitido.' : message,
+      })),
+      ...flattenErrors(e.children ?? [], `${field}.`),
+    ];
+  });
+}
+
+/** ValidationPipe global (docs/conventions.md): whitelist, forbidNonWhitelisted y 400 problem+json con errors[]. */
+export function createValidationPipe(): ValidationPipe {
+  return new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+    exceptionFactory: (errors) =>
+      new BadRequestException({
+        detail: 'La petición no superó la validación.',
+        errors: flattenErrors(errors),
+      }),
+  });
+}
 
 /** Configuración común a main.ts, openapi-export.ts y las pruebas e2e. */
 export function configureApp(app: INestApplication): void {
@@ -25,25 +62,7 @@ export function configureApp(app: INestApplication): void {
     origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
     exposedHeaders: ['Retry-After'],
   });
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      exceptionFactory: (errors) =>
-        new BadRequestException({
-          detail: 'La petición no superó la validación.',
-          errors: errors.flatMap((e) =>
-            Object.entries(e.constraints ?? {}).map(([rule, message]) => ({
-              field: e.property,
-              // El nombre de un campo no declarado lo elige el cliente: no se repite en el mensaje (R36).
-              message:
-                rule === 'whitelistValidation' ? 'Campo no admitido.' : message,
-            })),
-          ),
-        }),
-    }),
-  );
+  app.useGlobalPipes(createValidationPipe());
   app.useGlobalFilters(new ProblemDetailsFilter());
 }
 

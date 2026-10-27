@@ -1106,12 +1106,167 @@
           "encounters"
         ]
       }
+    },
+    "/api/v1/encounters/{id}/vital-signs": {
+      "post": {
+        "operationId": "ClinicalCaptureController_recordVitalSigns",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVitalSignsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Toma registrada con hora del servidor y responsable del token. 422 con errors[] por campo si falta un signo obligatorio, alguno está fuera de rango (la toma entera se rechaza) o la sistólica no supera a la diastólica.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VitalSignsDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error en application/problem+json (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "clinical-capture"
+        ]
+      }
+    },
+    "/api/v1/encounters/{id}/symptom-findings": {
+      "post": {
+        "operationId": "ClinicalCaptureController_recordSymptomFindings",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSymptomFindingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Hallazgos registrados en el orden recibido, con la misma hora del servidor y el responsable del token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SymptomFindingListDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error en application/problem+json (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "clinical-capture"
+        ]
+      }
+    },
+    "/api/v1/encounters/{id}/clinical-capture": {
+      "get": {
+        "operationId": "ClinicalCaptureController_getCapture",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicalCaptureDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error en application/problem+json (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "clinical-capture"
+        ]
+      }
     }
   },
   "info": {
     "title": "Asclepio API",
     "description": "Triage de urgencias asistido por IA. La IA propone, el profesional decide.",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "contact": {}
   },
   "tags": [],
@@ -1849,8 +2004,11 @@
             "type": "string",
             "enum": [
               "ENCOUNTER_CREATED",
-              "STATUS_CHANGED"
-            ]
+              "STATUS_CHANGED",
+              "VITAL_SIGNS_RECORDED",
+              "SYMPTOM_FINDINGS_RECORDED"
+            ],
+            "description": "Tipo de evento. F-02: ENCOUNTER_CREATED, STATUS_CHANGED. F-03: VITAL_SIGNS_RECORDED (payload { vitalSignsId }) y SYMPTOM_FINDINGS_RECORDED (payload { findingIds, count }), sin fromStatus/toStatus ni valores clínicos. Las features siguientes añaden tipos: los clientes deben tolerar tipos desconocidos."
           },
           "fromStatus": {
             "type": "string",
@@ -2168,6 +2326,331 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "ConsciousnessLevel": {
+        "type": "string",
+        "enum": [
+          "A",
+          "C",
+          "V",
+          "P",
+          "U"
+        ],
+        "description": "Nivel de conciencia (ACVPU). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico."
+      },
+      "CreateVitalSignsDto": {
+        "type": "object",
+        "properties": {
+          "respiratoryRate": {
+            "type": "integer",
+            "description": "Frecuencia respiratoria (rpm). Entero. Rango admitido 4–80 rpm (fuera de rango → 422 y la toma entera se rechaza). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 4,
+            "maximum": 80
+          },
+          "oxygenSaturation": {
+            "type": "integer",
+            "description": "Saturación de oxígeno (%). Entero. Rango admitido 50–100 % (fuera de rango → 422 y la toma entera se rechaza). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 50,
+            "maximum": 100
+          },
+          "supplementalOxygen": {
+            "type": "boolean",
+            "description": "Oxígeno suplementario. Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico."
+          },
+          "systolicBp": {
+            "type": "integer",
+            "description": "Presión arterial sistólica (mmHg). Entero. Rango admitido 40–300 mmHg (fuera de rango → 422 y la toma entera se rechaza). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 40,
+            "maximum": 300
+          },
+          "heartRate": {
+            "type": "integer",
+            "description": "Frecuencia cardiaca (lpm). Entero. Rango admitido 20–300 lpm (fuera de rango → 422 y la toma entera se rechaza). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 20,
+            "maximum": 300
+          },
+          "consciousness": {
+            "description": "Nivel de conciencia (ACVPU). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConsciousnessLevel"
+              }
+            ]
+          },
+          "temperatureC": {
+            "type": "number",
+            "description": "Temperatura (°C). Número con como máximo un decimal. Rango admitido 25.0–45.0 °C (fuera de rango → 422 y la toma entera se rechaza). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 25,
+            "maximum": 45
+          },
+          "diastolicBp": {
+            "type": "integer",
+            "description": "Presión arterial diastólica (mmHg). Entero. Rango admitido 20–200 mmHg (fuera de rango → 422 y la toma entera se rechaza). Opcional en cada toma. PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 20,
+            "maximum": 200
+          },
+          "glucoseMgDl": {
+            "type": "integer",
+            "description": "Glucometría (mg/dL). Entero. Rango admitido 20–600 mg/dL (fuera de rango → 422 y la toma entera se rechaza). Opcional en cada toma. PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 20,
+            "maximum": 600
+          }
+        },
+        "required": [
+          "respiratoryRate",
+          "oxygenSaturation",
+          "supplementalOxygen",
+          "systolicBp",
+          "heartRate",
+          "consciousness",
+          "temperatureC"
+        ]
+      },
+      "VitalSignsDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "encounterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "respiratoryRate": {
+            "type": "integer",
+            "description": "Frecuencia respiratoria (rpm). Entero. Rango admitido 4–80 rpm (fuera de rango → 422 y la toma entera se rechaza). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 4,
+            "maximum": 80
+          },
+          "oxygenSaturation": {
+            "type": "integer",
+            "description": "Saturación de oxígeno (%). Entero. Rango admitido 50–100 % (fuera de rango → 422 y la toma entera se rechaza). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 50,
+            "maximum": 100
+          },
+          "supplementalOxygen": {
+            "type": "boolean",
+            "description": "Oxígeno suplementario. Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico."
+          },
+          "systolicBp": {
+            "type": "integer",
+            "description": "Presión arterial sistólica (mmHg). Entero. Rango admitido 40–300 mmHg (fuera de rango → 422 y la toma entera se rechaza). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 40,
+            "maximum": 300
+          },
+          "heartRate": {
+            "type": "integer",
+            "description": "Frecuencia cardiaca (lpm). Entero. Rango admitido 20–300 lpm (fuera de rango → 422 y la toma entera se rechaza). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 20,
+            "maximum": 300
+          },
+          "consciousness": {
+            "description": "Nivel de conciencia (ACVPU). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConsciousnessLevel"
+              }
+            ]
+          },
+          "temperatureC": {
+            "type": "number",
+            "description": "Temperatura (°C). Número con como máximo un decimal. Rango admitido 25.0–45.0 °C (fuera de rango → 422 y la toma entera se rechaza). Obligatorio en cada toma (si falta → 422). PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "minimum": 25,
+            "maximum": 45
+          },
+          "diastolicBp": {
+            "type": "integer",
+            "description": "Presión arterial diastólica (mmHg). Entero. Rango admitido 20–200 mmHg (fuera de rango → 422 y la toma entera se rechaza). Opcional en cada toma. PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "nullable": true,
+            "minimum": 20,
+            "maximum": 200
+          },
+          "glucoseMgDl": {
+            "type": "integer",
+            "description": "Glucometría (mg/dL). Entero. Rango admitido 20–600 mg/dL (fuera de rango → 422 y la toma entera se rechaza). Opcional en cada toma. PROVISIONAL — no validado clínicamente, revisar con asesor clínico.",
+            "nullable": true,
+            "minimum": 20,
+            "maximum": 600
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Hora del servidor de la toma."
+          },
+          "recordedBy": {
+            "$ref": "#/components/schemas/StaffRefDto"
+          }
+        },
+        "required": [
+          "id",
+          "encounterId",
+          "respiratoryRate",
+          "oxygenSaturation",
+          "supplementalOxygen",
+          "systolicBp",
+          "heartRate",
+          "consciousness",
+          "temperatureC",
+          "diastolicBp",
+          "glucoseMgDl",
+          "recordedAt",
+          "recordedBy"
+        ]
+      },
+      "SymptomFindingKind": {
+        "type": "string",
+        "enum": [
+          "SYMPTOM",
+          "FINDING",
+          "COMPLAINT_NOTE"
+        ],
+        "description": "SYMPTOM = lo que refiere el paciente; FINDING = lo que observa enfermería; COMPLAINT_NOTE = precisión del motivo de consulta (el motivo original no se modifica)."
+      },
+      "SymptomFindingInputDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "description": "SYMPTOM = lo que refiere el paciente; FINDING = lo que observa enfermería; COMPLAINT_NOTE = precisión del motivo de consulta (el motivo original no se modifica).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SymptomFindingKind"
+              }
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Texto libre de 1 a 500 caracteres sin contar espacios iniciales y finales (se guarda sin ellos)."
+          }
+        },
+        "required": [
+          "kind",
+          "description"
+        ]
+      },
+      "CreateSymptomFindingsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SymptomFindingInputDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "SymptomFindingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "encounterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SymptomFindingKind"
+              }
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Hora del servidor de la captura."
+          },
+          "recordedBy": {
+            "$ref": "#/components/schemas/StaffRefDto"
+          }
+        },
+        "required": [
+          "id",
+          "encounterId",
+          "kind",
+          "description",
+          "recordedAt",
+          "recordedBy"
+        ]
+      },
+      "SymptomFindingListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SymptomFindingDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ClinicalCaptureDto": {
+        "type": "object",
+        "properties": {
+          "encounterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "REGISTERED",
+              "WAITING_TRIAGE",
+              "TRIAGED",
+              "IN_CARE",
+              "CLOSED",
+              "CANCELLED"
+            ]
+          },
+          "chiefComplaintText": {
+            "type": "string",
+            "description": "Motivo de consulta original (no se edita)."
+          },
+          "complaintSource": {
+            "type": "string",
+            "enum": [
+              "TYPED",
+              "VOICE_ON_DEVICE"
+            ]
+          },
+          "vitalSigns": {
+            "description": "Todas las tomas, por recordedAt e id ascendentes.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VitalSignsDto"
+            }
+          },
+          "symptomFindings": {
+            "description": "Todos los hallazgos, por recordedAt e id ascendentes.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SymptomFindingDto"
+            }
+          }
+        },
+        "required": [
+          "encounterId",
+          "status",
+          "chiefComplaintText",
+          "complaintSource",
+          "vitalSigns",
+          "symptomFindings"
         ]
       },
       "FieldErrorDto": {

@@ -21,7 +21,10 @@ export type AuditAction =
   | 'PRE_REGISTRATION_CONFIRMED'
   | 'PRE_REGISTRATION_REJECTED'
   | 'ENCOUNTER_CREATED'
-  | 'ENCOUNTER_STATUS_CHANGED';
+  | 'ENCOUNTER_STATUS_CHANGED'
+  // F-03-api
+  | 'VITAL_SIGNS_RECORDED'
+  | 'SYMPTOM_FINDINGS_RECORDED';
 
 export type AuditJson =
   string | number | boolean | null | AuditJson[] | { [key: string]: AuditJson };
@@ -61,6 +64,24 @@ const FORBIDDEN_KEYS = new Set([
   'cancellationreason',
   'rejectionreason',
   'estimatedageyears',
+  // F-03-api (D9, R18): valores clínicos de la captura y textos de los hallazgos. Se admiten vitalSignsId,
+  // findingIds, count y encounterId (solo ids y conteos).
+  'respiratoryrate',
+  'oxygensaturation',
+  'supplementaloxygen',
+  'systolicbp',
+  'heartrate',
+  'consciousness',
+  'temperaturec',
+  'diastolicbp',
+  'glucosemgdl',
+  'spo2',
+  'temperature',
+  'glucose',
+  'description',
+  'values',
+  'vitalsigns',
+  'findings',
 ]);
 
 /** Lanza si la metadata contiene (a cualquier profundidad) una clave con datos personales o secretos. */

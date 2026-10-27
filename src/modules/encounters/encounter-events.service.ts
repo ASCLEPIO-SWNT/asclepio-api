@@ -6,7 +6,12 @@ import {
 import { type AuditJson, assertSafeMetadata } from '../audit/audit.service.js';
 import type { EncounterStatus } from './encounter-state-machine.js';
 
-export type EncounterEventType = 'ENCOUNTER_CREATED' | 'STATUS_CHANGED';
+export type EncounterEventType =
+  | 'ENCOUNTER_CREATED'
+  | 'STATUS_CHANGED'
+  // F-03-api (R14, R15): sin from/to; payload solo con ids y conteos (D9).
+  | 'VITAL_SIGNS_RECORDED'
+  | 'SYMPTOM_FINDINGS_RECORDED';
 export type ActorType = 'STAFF' | 'PATIENT' | 'SYSTEM';
 
 export interface Actor {

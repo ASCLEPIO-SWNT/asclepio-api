@@ -3,6 +3,7 @@
 Monolito modular NestJS 12 + TypeScript estricto, en ESM (`"type": "module"`, imports relativos con `.js`), con Jest (ts-jest ESM) (ADR 0001). PostgreSQL en Supabase vía Prisma, en el esquema `asclepio` (ADR 0003).
 
 ## Estructura
+
 ```
 src/
 ├── main.ts                 # bootstrap: prefijo /api/v1, Swagger, filtro problem+json, logger
@@ -31,27 +32,29 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 
 ## Módulos y datos
 
-| Módulo | Responsabilidad | Tablas propias | Puede usar (services) |
-|---|---|---|---|
-| `auth` | Login del personal y del paciente, JWT, guard global (rol y tipo de principal), alta de cuenta de paciente, consentimiento, `GET /me` | `patient_accounts` | `users`, `patients`, `tenancy`, `audit` |
-| `users` | Usuarios y roles | `users` | `tenancy` |
-| `tenancy` | Tenants, sedes y contexto de tenant por petición | `tenants`, `sites` | — |
-| `patients` | Búsqueda y alta de pacientes (NN y menores) y perfil del paciente en la app (F-02) | `patients` | `audit` |
-| `encounters` | Pre-registros, atenciones, máquina de estados, línea de tiempo y captura clínica | `pre_registrations`, `encounters`, `encounter_events`, `vital_signs`, `symptom_findings` | `patients`, `tenancy`, `auth` (`PatientAccountsService`), `users`, `audit` |
-| `triage` | Decisiones humanas (VALIDATE/CORRECT/MANUAL) | `triage_decisions` | `encounters`, `ai`, `audit` |
-| `ai` | Sugerencia: `LlmClient` (`GroqAdapter`, `OpenRouterAdapter`), `TriagePromptBuilder`, `TriageResponseValidator`, `SafetyGuards`, `TriageAdvisor` | `triage_suggestions` | `encounters` (solo lectura de la captura) |
-| `queue` | Cola priorizada | — | `encounters`, `triage` |
-| `reports` | Tiempos, cumplimiento, concordancia y CSV | — | `encounters`, `triage`, `ai` |
-| `audit` | Escritura append-only de `audit_log` | `audit_log` | — |
+| Módulo       | Responsabilidad                                                                                                                                 | Tablas propias                                                                           | Puede usar (services)                                                      |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `auth`       | Login del personal y del paciente, JWT, guard global (rol y tipo de principal), alta de cuenta de paciente, consentimiento, `GET /me`           | `patient_accounts`                                                                       | `users`, `patients`, `tenancy`, `audit`                                    |
+| `users`      | Usuarios y roles                                                                                                                                | `users`                                                                                  | `tenancy`                                                                  |
+| `tenancy`    | Tenants, sedes y contexto de tenant por petición                                                                                                | `tenants`, `sites`                                                                       | —                                                                          |
+| `patients`   | Búsqueda y alta de pacientes (NN y menores) y perfil del paciente en la app (F-02)                                                              | `patients`                                                                               | `audit`                                                                    |
+| `encounters` | Pre-registros, atenciones, máquina de estados, línea de tiempo y captura clínica                                                                | `pre_registrations`, `encounters`, `encounter_events`, `vital_signs`, `symptom_findings` | `patients`, `tenancy`, `auth` (`PatientAccountsService`), `users`, `audit` |
+| `triage`     | Decisiones humanas (VALIDATE/CORRECT/MANUAL)                                                                                                    | `triage_decisions`                                                                       | `encounters`, `ai`, `audit`                                                |
+| `ai`         | Sugerencia: `LlmClient` (`GroqAdapter`, `OpenRouterAdapter`), `TriagePromptBuilder`, `TriageResponseValidator`, `SafetyGuards`, `TriageAdvisor` | `triage_suggestions`                                                                     | `encounters` (solo lectura de la captura)                                  |
+| `queue`      | Cola priorizada                                                                                                                                 | —                                                                                        | `encounters`, `triage`                                                     |
+| `reports`    | Tiempos, cumplimiento, concordancia y CSV                                                                                                       | —                                                                                        | `encounters`, `triage`, `ai`                                               |
+| `audit`      | Escritura append-only de `audit_log`                                                                                                            | `audit_log`                                                                              | —                                                                          |
 
 ## Dependencias
 
 **Permitidas**
+
 - `modules/*` → `common/*`.
 - `modules/A` → el **service exportado** por `modules/B`, si figura en la tabla anterior.
 - Solo el módulo dueño de una tabla usa su delegado Prisma (`prisma.<tabla>`).
 
 **Prohibidas**
+
 - Un módulo que consulta tablas de otro (`prisma.encounters` desde `queue`, por ejemplo).
 - Dependencias circulares entre módulos.
 - `common/` que importa de `modules/`.
@@ -60,16 +63,19 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 - Supabase JS, Supabase Auth, Storage o REST.
 
 ## Contrato
+
 - `@nestjs/swagger` genera el OpenAPI, y `npm run openapi:export` lo escribe en `openapi/asclepio-api.v1.json` (ADR 0007).
 - Prefijo `/api/v1`. Los errores siguen `application/problem+json` mediante un filtro global.
 
 ## Autenticación y tenancy (F-01)
+
 - Guard global (`APP_GUARD`, `modules/auth/auth.guard.ts`) con **denegación por defecto**: `@Public()` pasa sin token; el resto exige Bearer válido (401) y `@StaffRoles(...)` o `@PatientOnly()` (403). Decoradores en `common/auth/`.
 - El tenant sale **solo** del claim `tid` (`@CurrentPrincipal()`); los services que leen datos de una IPS reciben `tenantId` primero y responden 404 igual para "no existe" y "de otro tenant".
 - `@PublicThrottled()` (`common/throttle/`) = `@Public()` + límite de 10 peticiones / 60 s por IP y endpoint (`@nestjs/throttler`, en memoria).
 - `TenancyModule` exporta solo el service (lo usan los scripts CLI); `TenancyHttpModule` añade `GET /public/tenants`.
 
 ## Pre-registro y atenciones (F-02)
+
 - `auth` exporta `PatientAccountsService` (verificación de identidad de la cuenta e `identityVerified` de la bandeja) además de `TokenService`.
 - `PatientsModule` exporta solo el service; `PatientsHttpModule` (solo en `AppModule`) añade `GET/POST /patients` y `GET/PATCH /patient/profile`.
 - `@Throttled()` (`common/throttle/`) = mismo límite que `@PublicThrottled()` pero sin `@Public()`: lo usan `PATCH /patient/profile` y `POST /patient/pre-registrations`.
@@ -77,11 +83,20 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 - `EncountersService.transition(...)` es la transición genérica exportada para F-05/F-06 (UPDATE condicional sobre el estado leído; nunca a `TRIAGED`). `EncounterStateMachine` es una función pura.
 - Rutas del paciente bajo `/patient/…`; el paciente sale solo de `pid` y `tid` del token.
 
+## Captura clínica (F-03)
+
+- Vive en `encounters` (D1 de specs/F-03-api/design.md): `ClinicalCaptureService` es el único usuario de `vital_signs` y `symptom_findings` (solo `create` y lecturas) y **se exporta** desde `EncountersModule` para que `ai` (F-04) lea la captura. `ClinicalCaptureController` expone `POST /encounters/{id}/vital-signs`, `POST /encounters/{id}/symptom-findings` (`NURSE`) y `GET /encounters/{id}/clinical-capture` (`NURSE`, `PHYSICIAN`).
+- `vital-signs.rules.ts` (puro): `VITAL_SIGN_DEFINITIONS`, `VITAL_SIGN_COHERENCE_RULES` y `validateVitalSigns` (422 de R4–R6), única fuente de la lista de signos y de los rangos **PROVISIONALES** (PA-F03-1, PA-F03-2). `symptom-findings.rules.ts`: tipos de hallazgo y límites técnicos.
+- `EncountersService.lockForCapture(...)` bloquea la atención en `WAITING_TRIAGE` con un UPDATE condicional de `updated_at` dentro de la transacción de la captura (0 filas → 404/409). Ningún método modifica `chief_complaint_text` (R10).
+- `createValidationPipe()` (`app.setup.ts`) aplana los errores anidados de `class-validator` con la ruta del campo (`items.0.kind`).
+
 ## Scripts y pruebas
+
 - `npm run users:create -- --email … --full-name … --role … --tenant …` (contraseña por stdin) y `npm run sites:create -- --tenant … --name …`: compilan y ejecutan `src/scripts/*` con un contexto Nest mínimo (`CliModule`) sobre `DATABASE_URL`. Fuera de `production` exigen el prefijo `DEV-`.
 - `npm test` no necesita base. `npm run test:int` levanta el PostgreSQL local de Docker, aplica las migraciones con `migrate deploy` y ejecuta `test/*.int-spec.ts` como `asclepio_app`.
 
 ## Qué es "buen trabajo" aquí
+
 - El cambio vive en el módulo correcto y respeta la tabla de dependencias.
 - Cada `R<n>` tiene su prueba `R<n>: …` y pasa.
 - No hay datos personales en logs, eventos ni payloads al LLM.

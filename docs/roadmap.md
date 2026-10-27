@@ -45,6 +45,7 @@ Regla entre repos: **primero el contrato**. `F-0X-web` y `F-0X-mobile` no pasan 
 | F-01-web | done (2026-10-26) | consume 0.2.1 |
 | F-02-api | done (2026-10-27) | 0.3.0 |
 | F-01-mobile | done (2026-10-27) | consume 0.2.1 |
+| F-03-api | done (2026-10-27) | 0.4.0 |
 | Todos los demás | pending | — |
 
 ## Trazabilidad F-0X.ACn → R<n>
@@ -60,6 +61,10 @@ Cada spec (`specs/<id>/requirements.md`) traza sus `R<n>` a los criterios global
 | F-01.AC5 | F-01-api | R27–R35 | ídem |
 | F-01.AC7 | F-01-api | R3–R7, R12, R13, R18–R20, R23–R25, R37, R39, R44–R47 | ídem |
 | F-01.AC8 | F-01-api | R20–R22, R26, R31, R38 | ídem |
+| F-03.AC1 | F-03-api | R1–R3, R11–R13, R19–R21 | `R<n>:` en `src/modules/encounters/*.spec.ts`, `test/*.e2e-spec.ts` y `test/int/*.int-spec.ts` |
+| F-03.AC2 | F-03-api | R3–R6, R22 | ídem |
+| F-03.AC3 | F-03-api | R7–R12, R19–R21 | ídem |
+| F-03.AC4 | F-03-api | R14–R18 | ídem |
 
 ## Preguntas abiertas (consolidado)
 
@@ -71,7 +76,7 @@ No se implementa nada que dependa de estas preguntas hasta que se respondan. El 
 | ~~PA-F01-4~~ | Resuelta en el ADR 0008: el móvil lo usa el **paciente** en su teléfono, con cuenta propia; recepción confirma en la web; la llegada legal es la confirmación | — |
 | ~~PA-PAC-1..6~~ | Resueltas el 2026-10-26 (ADR 0008): documento + contraseña; sede de una lista; expira a las 6 h; el paciente solo ve el estado (no el nivel); casilla de consentimiento Ley 1581 con `consent_at` y versión; sin cuentas de menores | — |
 | ~~PA-F02-1..9~~ | Resueltas el 2026-10-26 (propuestas de la spec de F-02-api aceptadas: datos mínimos y NN, paso automático a WAITING_TRIAGE, cancelación por RECEPTION/NURSE con motivo, IN_CARE/CLOSED por PHYSICIAN en F-06, edición limitada del perfil, un pendiente y una atención activa, rechazo por recepción, filtro por sede, estado sin nivel) | — |
-| PA-F03-1..4 | Lista de signos vitales, **rangos fisiológicos**, catálogo de síntomas | F-03 |
+| ~~PA-F03-1..4~~ | Resueltas el 2026-10-27 (spec de F-03-api): signos del NEWS2 y rangos amplios de plausibilidad, **PROVISIONALES, no validados clínicamente — revisar con asesor clínico**; hallazgos en texto libre estructurado; el motivo no se edita (notas `COMPLAINT_NOTE`) | — |
 | PA-F04-1 | **Reglas y umbrales de los SafetyGuards** (asesor clínico) | F-04 |
 | PA-F04-2..7 | Modelo y versión, timeout, disparo de la sugerencia, re-sugerencia, viñetas, saneamiento del texto | F-04 |
 | PA-F05-1..3 | Re-triage, catálogo de motivos, VALIDATE con guard | F-05 |
