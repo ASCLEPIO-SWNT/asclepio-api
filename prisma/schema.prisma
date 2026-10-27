@@ -73,7 +73,7 @@ model Site {
   name      String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   encounters       Encounter[]
   preRegistrations PreRegistration[]
 
@@ -97,7 +97,7 @@ model User {
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant                   Tenant            @relation(fields: [tenantId], references: [id])
+  tenant                   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   registeredEncounters     Encounter[]
   resolvedPreRegistrations PreRegistration[]
 
@@ -123,7 +123,7 @@ model Patient {
   createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   accounts         PatientAccount[] // como mucho una: patient_accounts.patient_id es único
   encounters       Encounter[]
   preRegistrations PreRegistration[]
@@ -150,8 +150,8 @@ model PatientAccount {
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id])
-  patient Patient @relation(fields: [patientId, tenantId], references: [id, tenantId])
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  patient Patient @relation(fields: [patientId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
 
   @@map("patient_accounts")
   @@schema("asclepio")
@@ -237,10 +237,12 @@ model Encounter {
   createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant           Tenant            @relation(fields: [tenantId], references: [id])
-  site             Site              @relation(fields: [siteId, tenantId], references: [id, tenantId])
-  patient          Patient           @relation(fields: [patientId, tenantId], references: [id, tenantId])
-  registeredByUser User              @relation(fields: [registeredBy], references: [id])
+  // F-02 corrección 1: todas RESTRICT. ON UPDATE CASCADE (valor por defecto de Prisma) reescribiría la atención sin evento
+  // ni auditoría al cambiar el id referenciado (las acciones referenciales se ejecutan como dueño y saltan los grants).
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  site             Site              @relation(fields: [siteId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+  patient          Patient           @relation(fields: [patientId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+  registeredByUser User              @relation(fields: [registeredBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
   preRegistrations PreRegistration[] // como mucho uno: pre_registrations.encounter_id es único
   events           EncounterEvent[]
 
@@ -271,9 +273,10 @@ model PreRegistration {
   rejectionReason    String?               @map("rejection_reason")
   updatedAt          DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant         Tenant     @relation(fields: [tenantId], references: [id])
-  patient        Patient    @relation(fields: [patientId, tenantId], references: [id, tenantId])
-  site           Site       @relation(fields: [siteId, tenantId], references: [id, tenantId])
+  // F-02 corrección 1: todas RESTRICT (ver Encounter).
+  tenant         Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  patient        Patient    @relation(fields: [patientId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+  site           Site       @relation(fields: [siteId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
   resolvedByUser User?      @relation(fields: [resolvedBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
   // MATCH SIMPLE: no se comprueba mientras encounter_id es NULL. Restrict: nunca SET NULL sobre tenant_id (NOT NULL).
   encounter      Encounter? @relation(fields: [encounterId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
