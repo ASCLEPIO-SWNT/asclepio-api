@@ -163,8 +163,8 @@ Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 - `encounter_events.payload` y `audit_log.metadata` no contienen datos personales (RNF-05).
 
 ### App del paciente (ADR 0008) — propuesta, se cierra en las specs de F-01-api y F-02-api
-- `patient_accounts`: credenciales del paciente (`patient_id`, `login`, `password_hash`, `consent_at`, `active`). Es un principal separado de `users`.
-- `pre_registrations`: `patient_id`, `site_id`, `chief_complaint_text`, `complaint_source`, `pre_registered_at` (servidor), `status` (`PENDING`, `CONFIRMED`, `EXPIRED`, `REJECTED`), `encounter_id` (al confirmar), `confirmed_by`.
+- `patient_accounts`: credenciales del paciente (`patient_id`; el login es el documento del paciente; `password_hash`, `consent_at`, `consent_version`, `failed_attempts`, `locked_until`, `active`). Es un principal separado de `users` y no se admiten menores.
+- `pre_registrations`: `patient_id`, `site_id`, `chief_complaint_text`, `complaint_source`, `pre_registered_at` (servidor), `status` (`PENDING`, `CONFIRMED`, `EXPIRED` a las 6 h, `REJECTED`), `encounter_id` (al confirmar), `confirmed_by`.
 - Al confirmar se crea `encounters` con `arrival_at = now()` del servidor (hora legal) y `status = REGISTERED`.
 
 ### Pendiente (preguntas abiertas)

@@ -59,7 +59,7 @@ No se implementa nada que dependa de estas preguntas hasta que se respondan. El 
 |---|---|---|
 | ~~PA-F01-1..3~~ | Resueltas el 2026-10-26 (JWT de 8 h sin refresh; contraseña ≥ 10 y bloqueo de 15 min tras 5 intentos; un rol y un tenant por usuario) | — |
 | ~~PA-F01-4~~ | Resuelta en el ADR 0008: el móvil lo usa el **paciente** en su teléfono, con cuenta propia; recepción confirma en la web; la llegada legal es la confirmación | — |
-| PA-PAC-1..6 | Método de login del paciente, elección de sede, expiración del pre-registro, qué ve el paciente, consentimiento (Ley 1581), menores (ver ADR 0008) | F-01-api, F-02-api, F-01/F-02-mobile |
+| ~~PA-PAC-1..6~~ | Resueltas el 2026-10-26 (ADR 0008): documento + contraseña; sede de una lista; expira a las 6 h; el paciente solo ve el estado (no el nivel); casilla de consentimiento Ley 1581 con `consent_at` y versión; sin cuentas de menores | — |
 | PA-F02-1..4 | Datos mínimos del paciente, transiciones de estado y quién las hace | F-02 |
 | PA-F03-1..4 | Lista de signos vitales, **rangos fisiológicos**, catálogo de síntomas | F-03 |
 | PA-F04-1 | **Reglas y umbrales de los SafetyGuards** (asesor clínico) | F-04 |

@@ -29,10 +29,10 @@ Originalmente la app móvil era la herramienta de **recepción** para registrar 
 - **Superficie de abuso:** la app es pública, así que los endpoints de paciente necesitan rate limiting y validación estricta. Los pre-registros sin confirmar expiran.
 - El dictado sigue siendo en el dispositivo y ahora lo hace el paciente: el audio sigue sin salir del teléfono.
 
-## Preguntas abiertas (nuevas)
-- **PA-PAC-1** Método de alta e inicio de sesión del paciente: documento + contraseña (propuesta, sin infraestructura extra) u OTP por SMS o correo (requiere proveedor).
-- **PA-PAC-2** ¿Cómo elige el paciente la sede del pre-registro (lista o QR en la entrada)?
-- **PA-PAC-3** ¿Cuánto tiempo vive un pre-registro sin confirmar antes de expirar?
-- **PA-PAC-4** ¿Qué ve el paciente después de que lo confirman (estado de su atención, turno)? ¿Ve su nivel de triage?
-- **PA-PAC-5** Texto y registro del consentimiento de tratamiento de datos (Ley 1581).
-- **PA-PAC-6** Menores de edad: ¿pueden tener cuenta? ¿Un acudiente registra por ellos?
+## Preguntas resueltas (humano, 2026-10-26)
+- [x] **PA-PAC-1** Alta e inicio de sesión → **documento (tipo + número) + contraseña**, con la misma política que el personal: mínimo 10 caracteres y bloqueo de 15 min tras 5 intentos. Sin OTP en el MVP.
+- [x] **PA-PAC-2** Sede del pre-registro → el paciente la **elige de una lista** de las sedes del tenant.
+- [x] **PA-PAC-3** Expiración → un pre-registro `PENDING` sin confirmar **expira a las 6 h** (`EXPIRED`).
+- [x] **PA-PAC-4** Qué ve el paciente → **solo el estado** de su pre-registro o atención ("pendiente de confirmación", "en espera de triage", "en atención", "cerrada"). **No ve su nivel de triage.**
+- [x] **PA-PAC-5** Consentimiento → **casilla obligatoria** con un texto de tratamiento de datos (Ley 1581 de 2012) que redacta el equipo. Se guarda `consent_at` y la versión del texto. Sin aceptarlo no se crea la cuenta.
+- [x] **PA-PAC-6** Menores → **no tienen cuenta en el MVP**. A los menores los registra recepción directamente en la web.
