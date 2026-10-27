@@ -4,16 +4,16 @@ import type { App } from 'supertest/types.js';
 import { buildOpenApiDocument } from '../src/app.setup.js';
 import { createApp } from './e2e-app.js';
 
-describe('Contrato OpenAPI 0.2.0 (e2e, sin base)', () => {
+describe('Contrato OpenAPI 0.2.x (e2e, sin base)', () => {
   let app: INestApplication<App>;
   beforeAll(async () => {
     app = await createApp();
   });
   afterAll(() => app.close());
 
-  it('R8: el documento tiene info.version 0.2.0, las seis rutas nuevas y el esquema de seguridad bearer solo en las protegidas', () => {
+  it('R8: el documento tiene info.version 0.2.x, las seis rutas nuevas y el esquema de seguridad bearer solo en las protegidas', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.2.0');
+    expect(doc.info.version).toBe('0.2.1');
     expect(Object.keys(doc.paths).sort()).toEqual([
       '/api/v1/auth/login',
       '/api/v1/auth/patient/accounts',
@@ -30,6 +30,14 @@ describe('Contrato OpenAPI 0.2.0 (e2e, sin base)', () => {
     });
     expect(doc.paths['/api/v1/me'].get?.security).toEqual([{ bearer: [] }]);
     expect(doc.paths['/api/v1/auth/login'].post?.security).toBeUndefined();
+  });
+
+  it('R20: CreatePatientAccountDto documenta consentVersion como string', () => {
+    const doc = buildOpenApiDocument(app);
+    const schema = doc.components?.schemas?.CreatePatientAccountDto as {
+      properties: Record<string, { type?: string }>;
+    };
+    expect(schema.properties.consentVersion.type).toBe('string');
   });
 
   it('R2: no existe endpoint de renovación de tokens', async () => {

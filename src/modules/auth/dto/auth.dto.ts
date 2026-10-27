@@ -109,6 +109,7 @@ export class CreatePatientAccountDto {
   consentAccepted: unknown;
 
   @ApiProperty({
+    type: String,
     example: '2026-10-v1',
     description: 'Versión vigente de GET /public/consent. Si no coincide: 422.',
   })

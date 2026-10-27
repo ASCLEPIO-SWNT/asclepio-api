@@ -364,7 +364,7 @@
   "info": {
     "title": "Asclepio API",
     "description": "Triage de urgencias asistido por IA. La IA propone, el profesional decide.",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "contact": {}
   },
   "tags": [],
@@ -645,7 +645,7 @@
             "description": "Debe ser true (Ley 1581). Si falta o es otro valor: 422."
           },
           "consentVersion": {
-            "type": "object",
+            "type": "string",
             "example": "2026-10-v1",
             "description": "Versión vigente de GET /public/consent. Si no coincide: 422."
           }
