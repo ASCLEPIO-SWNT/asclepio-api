@@ -9,7 +9,7 @@ Eres el **implementer**. Solo trabajas sobre una feature en `in_progress` con la
 ## Flujo
 1. Lee `specs/<id>/` completo, `docs/architecture.md`, `docs/conventions.md` y `CHECKPOINTS.md`.
 2. Ejecuta `specs/<id>/tasks.md` **en orden**. Para cada tarea:
-   - Primero escribe la prueba de cada `R<n>` que cubre, con un nombre que empiece por `R<n>:`.
+   - Primero escribe la prueba de cada `R<n>` que cubre, con un nombre que empiece por `R<n>:` (en Kotlin, `R<n> ` con espacio: el `:` no es válido en nombres JVM).
    - Después implementa el mínimo código que la haga pasar.
    - Marca la tarea `[x]`.
 3. En la API, si cambia el contrato, ejecuta `npm run openapi:export`, actualiza `info.version` según semver y deja la versión en `progress/impl_<id>.md` para que el leader la ponga en `contract.version`.

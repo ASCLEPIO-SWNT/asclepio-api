@@ -21,7 +21,7 @@ Los tres archivos viven en `specs/<id>/` (por ejemplo, `specs/F-05-api/`):
 ### Reglas
 - Un requisito por línea, numerado `R1`, `R2`… La numeración no se reutiliza: si un requisito se elimina, se tacha.
 - Cada requisito termina con su traza: `(→ F-0X.ACn)`. Un requisito sin traza a un criterio global no se acepta. Si hace falta, primero se propone el cambio al brief.
-- Cada requisito es **verificable con una prueba** cuyo nombre empieza por `R<n>:`.
+- Cada requisito es **verificable con una prueba** cuyo nombre empieza por `R<n>:`. En Kotlin (asclepio-mobile) el nombre empieza por `R<n> ` (con espacio), porque `:` no es válido en nombres de método JVM.
 - Se usa estrictamente una de las cinco plantillas, con "deberá" como verbo:
 
 | Tipo | Plantilla |
