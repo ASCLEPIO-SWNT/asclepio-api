@@ -76,7 +76,7 @@
         "Detalle en specs/F-02-api/requirements.md"
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "F-03-api",
