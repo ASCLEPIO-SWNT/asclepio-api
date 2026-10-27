@@ -177,7 +177,7 @@ check_keys() {  # $1 = archivo, resto = claves. Nunca imprime valores.
   ((${#missing[@]})) && miss_cfg "$file sin definir: ${missing[*]}" || ok "$file define: $*"
 }
 case "$REPO" in
-  api)    check_keys .env DATABASE_URL DIRECT_URL JWT_SECRET GROQ_API_KEY OPENROUTER_API_KEY ;;
+  api)    check_keys .env DATABASE_URL DIRECT_URL JWT_SECRET GROQ_API_KEY OPENROUTER_API_KEY PATIENT_CONSENT_VERSION ;;
   web)    check_keys .env VITE_API_URL ;;
   mobile) check_keys local.properties API_BASE_URL ;;
 esac
