@@ -29,3 +29,8 @@ Cada sesión cerrada añade una entrada al final con: fecha, feature, resultado,
 - **Revisión:** APROBADA.
 - **Incidente:** el commit `42f48b8` (harness) arrastró por error renombrados preparados por el implementer sin sus imports, y `main` dejó de compilar hasta el commit de cierre de F-02. Lección: el leader debe comprobar `git diff --cached` antes de un commit parcial con el implementer trabajando en el mismo repo.
 - **Pendientes (observaciones del reviewer):** (1) las FK de `encounters` y `pre_registrations` hacia tenants, sites, patients y users tienen `ON UPDATE CASCADE` (modificación sin rastro): pasarlas a RESTRICT en una migración nueva; (2) `ProblemDetails.instance` usa `originalUrl` y puede devolver el documento de la query: usar `req.path`; (3) revisar con `--create-only` los índices parciales (preview `partialIndexes`) en futuras migraciones.
+
+## 2026-10-27 — F-02-api · corrección 1 (pedida por el humano) → hecha
+- **Resultado:** la migración `f02_fk_on_update_restrict` deja las 17 FK del esquema en `ON DELETE/UPDATE RESTRICT` (12 tenían CASCADE, incluidas las de F-01 hacia tenants y patients); la prueba de integración R40 lo reproduce (23503 como `asclepio_app`). `ProblemDetails.instance` va sin query string (no devuelve el documento de `GET /patients?…`). Contrato sin cambios (0.3.0). Regla documentada en `docs/data-model.md` (Claves foráneas).
+- **Pruebas:** 49 unitarias, 43 e2e y 189 de integración. **Revisión:** APROBADA.
+- **Pendiente del humano:** aplicar en Supabase las 3 migraciones de F-02 (`npx prisma migrate deploy`).

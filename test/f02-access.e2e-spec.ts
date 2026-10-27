@@ -176,6 +176,21 @@ describe('F-02: autorización, campos prohibidos y horas del cliente (e2e, sin b
     }
   });
 
+  it('R49: un 400 de GET /patients?documentType=XX&documentNumber=123456 no devuelve el documento en ninguna parte del cuerpo (instance sin query)', async () => {
+    const res = await call(
+      'get',
+      '/patients?documentType=XX&documentNumber=123456',
+      staff.get('RECEPTION'),
+    );
+    expect(res.status).toBe(400);
+    expect(problem(res).status).toBe(400);
+    expect((JSON.parse(res.text) as { instance?: string }).instance).toBe(
+      '/api/v1/patients',
+    );
+    expect(res.text).not.toContain('123456');
+    expect(res.text).not.toContain('XX');
+  });
+
   it('R47: cualquier hora enviada por el cliente (arrivalAt, preRegisteredAt, expiresAt, resolvedAt, occurredAt, createdAt, updatedAt) responde 400', async () => {
     const times = [
       'arrivalAt',

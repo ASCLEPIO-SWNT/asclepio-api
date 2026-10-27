@@ -151,6 +151,9 @@ erDiagram
 - `vital_signs`, `symptom_findings`, `triage_suggestions` y `triage_decisions`: solo inserciones desde la aplicación. Una nueva medición es una nueva fila.
 - `encounters`: es la única tabla clínica que se actualiza (estado, `final_level`, `triaged_at`, `triaged_by`), siempre junto con un `encounter_event` en la misma transacción.
 
+### Claves foráneas
+- **Todas las FK del esquema son `ON DELETE RESTRICT ON UPDATE RESTRICT`** (migraciones `f01_audit_log_fk_restrict` y `f02_fk_on_update_restrict`). Una FK con `CASCADE` o `SET NULL` permitiría modificar atenciones o tablas append-only sin evento ni auditoría. Toda migración nueva debe declarar `onDelete: Restrict, onUpdate: Restrict` en Prisma y revisarse con `--create-only`.
+
 ### Tiempo
 - Todas las horas son `timestamptz` en UTC y se asignan **en el servidor** (`now()` o el reloj de la API), nunca desde el cliente (RNF-10).
 - La UI las muestra en `America/Bogota`. Los reportes interpretan los rangos de fechas en `America/Bogota`.

@@ -20,7 +20,11 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();
-    const problem = toProblem(exception, req.originalUrl ?? req.url);
+    // R36 (F-01) y R49 (F-02): instance es la ruta sin query string; la query puede llevar el documento del paciente.
+    const problem = toProblem(
+      exception,
+      (req.originalUrl ?? req.url).split('?', 1)[0],
+    );
     if (problem.status >= 500) {
       // Solo el tipo de error y la ruta: sin cuerpo de la petición (puede contener datos personales).
       this.logger.error({

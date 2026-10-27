@@ -190,6 +190,84 @@ describe('F-02: restricciones y permisos de la base (como asclepio_app)', () => 
     ]);
   });
 
+  // Corrección 1 de F-02 (observación del reviewer): con ON UPDATE CASCADE, cambiar el id de la sede, el paciente,
+  // el usuario o el tenant reescribía encounters y pre_registrations sin evento ni auditoría.
+  it('R40: cambiar el id de la sede, el paciente, el usuario o el tenant referenciados por atenciones y pre-registros falla con 23503 y las filas quedan intactas', async () => {
+    const tid = await newTenant('f02-db-fk-upd');
+    const sid = (
+      await one<{ id: string }>(
+        `INSERT INTO asclepio.sites (tenant_id, name) VALUES ($1, 'DEV-test sede') RETURNING id`,
+        [tid],
+      )
+    ).id;
+    const uid = (
+      await one<{ id: string }>(
+        `INSERT INTO asclepio.users (tenant_id, email, password_hash, full_name, role)
+         VALUES ($1, $2, 'x', 'DEV-test', 'RECEPTION') RETURNING id`,
+        [tid, `dev-test-${Date.now()}-${Math.random()}@example.test`],
+      )
+    ).id;
+    const encPatient = await patient(tid);
+    const prePatient = await patient(tid);
+    const enc = (
+      await one<{ id: string }>(
+        `INSERT INTO asclepio.encounters
+           (tenant_id, site_id, patient_id, status, origin, arrival_at, chief_complaint_text, complaint_source, registered_by)
+         VALUES ($1, $2, $3, 'WAITING_TRIAGE', 'DIRECT', now(), 'DEV-test', 'TYPED', $4) RETURNING id`,
+        [tid, sid, encPatient, uid],
+      )
+    ).id;
+    const pre = (
+      await one<{ id: string }>(
+        `INSERT INTO asclepio.pre_registrations
+           (tenant_id, patient_id, site_id, chief_complaint_text, complaint_source, status,
+            pre_registered_at, expires_at, resolved_at, resolved_by, rejection_reason)
+         VALUES ($1, $2, $3, 'DEV-test', 'TYPED', 'REJECTED', now(), now() + interval '6 hours', now(), $4, 'DEV-test')
+         RETURNING id`,
+        [tid, prePatient, sid, uid],
+      )
+    ).id;
+    const snapshot = async () => ({
+      encounter: (
+        await db.query('SELECT * FROM asclepio.encounters WHERE id = $1', [enc])
+      ).rows,
+      preRegistration: (
+        await db.query(
+          'SELECT * FROM asclepio.pre_registrations WHERE id = $1',
+          [pre],
+        )
+      ).rows,
+    });
+    const before = await snapshot();
+    expect(before.encounter).toHaveLength(1);
+    expect(before.preRegistration).toHaveLength(1);
+
+    for (const [table, id] of [
+      ['sites', sid],
+      ['patients', encPatient],
+      ['patients', prePatient],
+      ['users', uid],
+      ['tenants', tid],
+    ]) {
+      const code = await pgErrorCode(
+        db.query(
+          `UPDATE asclepio.${table} SET id = gen_random_uuid() WHERE id = $1`,
+          [id],
+        ),
+      );
+      expect([table, code]).toEqual([table, '23503']);
+    }
+    expect(await snapshot()).toEqual(before);
+
+    // Ninguna FK del esquema asclepio queda con CASCADE, SET NULL ni SET DEFAULT (r = RESTRICT).
+    const loose = await db.query<{ conname: string }>(
+      `SELECT conname FROM pg_constraint
+       WHERE contype = 'f' AND connamespace = 'asclepio'::regnamespace
+         AND (confupdtype <> 'r' OR confdeltype <> 'r')`,
+    );
+    expect(loose.rows).toEqual([]);
+  });
+
   it('R40: el CHECK de encounter_events exige actor_id NULL si y solo si el actor es SYSTEM', async () => {
     const enc = (await encounter(await patient(tenantId))).rows[0].id;
     expect(await pgErrorCode(event(enc, 'SYSTEM', userId))).toBe('23514');
