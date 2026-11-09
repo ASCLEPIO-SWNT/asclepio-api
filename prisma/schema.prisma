@@ -64,6 +64,7 @@ model Tenant {
   vitalSigns        VitalSign[]
   symptomFindings   SymptomFinding[]
   triageSuggestions TriageSuggestion[]
+  triageDecisions   TriageDecision[]
 
   @@map("tenants")
   @@schema("asclepio")
@@ -101,11 +102,13 @@ model User {
   updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   tenant                     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  registeredEncounters       Encounter[]
+  registeredEncounters       Encounter[]        @relation("EncounterRegisteredBy")
   resolvedPreRegistrations   PreRegistration[]
   recordedVitalSigns         VitalSign[]
   recordedSymptomFindings    SymptomFinding[]
   requestedTriageSuggestions TriageSuggestion[]
+  triagedEncounters          Encounter[]        @relation("EncounterTriagedBy")
+  triageDecisions            TriageDecision[]
 
   @@index([tenantId])
   @@map("users")
@@ -226,7 +229,8 @@ enum PreRegistrationStatus {
 
 /// Atención. Dueño: encounters. Solo se actualiza junto con su encounter_event y su auditoría (misma transacción).
 /// FKs compuestas con el tenant (D11). Como mucho una atención activa por paciente (D7, índice único parcial).
-/// final_level, triaged_at y triaged_by llegan con F-05 (D14).
+/// final_level, triaged_at y triaged_by (F-05-api, D8): solo los fija la decisión de triage (R9) y van juntos.
+/// CHECK manuales (migración f05_triage_decisions): los tres nulos o los tres no nulos, y no nulos en TRIAGED, IN_CARE y CLOSED.
 model Encounter {
   id                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId           String          @map("tenant_id") @db.Uuid
@@ -240,6 +244,10 @@ model Encounter {
   complaintSource    ComplaintSource @map("complaint_source")
   registeredBy       String          @map("registered_by") @db.Uuid
   cancellationReason String?         @map("cancellation_reason")
+  /// Nivel final de triage (1–5) decidido por enfermería (F-05-api, R9). Hora y responsable del servidor y del token.
+  finalLevel         Int?            @map("final_level") @db.SmallInt
+  triagedAt          DateTime?       @map("triaged_at") @db.Timestamptz(6)
+  triagedBy          String?         @map("triaged_by") @db.Uuid
   createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -248,12 +256,14 @@ model Encounter {
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   site              Site               @relation(fields: [siteId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
   patient           Patient            @relation(fields: [patientId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
-  registeredByUser  User               @relation(fields: [registeredBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  registeredByUser  User               @relation("EncounterRegisteredBy", fields: [registeredBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  triagedByUser     User?              @relation("EncounterTriagedBy", fields: [triagedBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
   preRegistrations  PreRegistration[] // como mucho uno: pre_registrations.encounter_id es único
   events            EncounterEvent[]
   vitalSigns        VitalSign[]
   symptomFindings   SymptomFinding[]
   triageSuggestions TriageSuggestion[]
+  triageDecisions   TriageDecision[] // como mucho una: triage_decisions.encounter_id es único (PA-F05-1)
 
   @@unique([id, tenantId])
   @@unique([patientId], map: "encounters_one_active_per_patient", where: raw("status <> ALL (ARRAY['CLOSED'::asclepio.encounter_status, 'CANCELLED'::asclepio.encounter_status])"))
@@ -455,11 +465,53 @@ model TriageSuggestion {
   createdAt      DateTime               @map("created_at") @db.Timestamptz(6)
 
   // Todas RESTRICT (las acciones referenciales se ejecutan como dueño y saltarían los grants append-only).
-  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  encounter       Encounter @relation(fields: [encounterId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
-  requestedByUser User      @relation(fields: [requestedBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  encounter       Encounter        @relation(fields: [encounterId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+  requestedByUser User             @relation(fields: [requestedBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  decisions       TriageDecision[]
 
+  @@unique([id, encounterId]) // F-05-api (D7): destino de la FK compuesta desde triage_decisions
   @@index([encounterId, createdAt(sort: Desc), id(sort: Desc)])
   @@map("triage_suggestions")
+  @@schema("asclepio")
+}
+
+// ---------------------------------------------------------------- F-05: decisión de triage
+
+/// Acción de enfermería sobre el nivel de triage (F-05-api): validar o corregir la sugerencia vigente, o clasificar a mano.
+enum TriageDecisionAction {
+  VALIDATE
+  CORRECT
+  MANUAL
+
+  @@map("triage_decision_action")
+  @@schema("asclepio")
+}
+
+/// Decisión de triage: como mucho una por atención (PA-F05-1), solo inserciones (asclepio_app: SELECT e INSERT).
+/// Dueño: triage. Es la única vía a TRIAGED (RNF-03, R11): se inserta en la misma transacción que fija final_level.
+/// CHECK manuales (migración f05_triage_decisions): MANUAL ⇔ sin sugerencia, CORRECT ⇔ con motivo, motivo de 1 a 500
+/// caracteres sin contar espacios extremos y nivel 1–5. FK compuesta (suggestion_id, encounter_id): la sugerencia es de la misma atención.
+model TriageDecision {
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String               @map("tenant_id") @db.Uuid
+  encounterId  String               @unique @map("encounter_id") @db.Uuid
+  suggestionId String?              @map("suggestion_id") @db.Uuid
+  action       TriageDecisionAction
+  level        Int                  @db.SmallInt
+  /// Motivo de corrección (PA-F05-2): solo en CORRECT. Nunca en eventos, auditoría ni logs (R21).
+  reason       String?
+  decidedBy    String               @map("decided_by") @db.Uuid
+  /// Hora del servidor (Clock, R20); sin default.
+  decidedAt    DateTime             @map("decided_at") @db.Timestamptz(6)
+
+  // Todas RESTRICT (R19): las acciones referenciales se ejecutan como dueño y saltarían los grants append-only.
+  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  encounter     Encounter         @relation(fields: [encounterId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+  // MATCH SIMPLE: no se comprueba mientras suggestion_id es NULL (MANUAL).
+  suggestion    TriageSuggestion? @relation(fields: [suggestionId, encounterId], references: [id, encounterId], onDelete: Restrict, onUpdate: Restrict)
+  decidedByUser User              @relation(fields: [decidedBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@map("triage_decisions")
   @@schema("asclepio")
 }
