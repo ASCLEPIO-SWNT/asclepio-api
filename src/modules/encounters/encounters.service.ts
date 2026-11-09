@@ -47,6 +47,18 @@ const BAD_REFERENCE = 'El paciente o la sede indicados no están disponibles.';
 export const NOT_WAITING_TRIAGE =
   'La atención no está en espera de triage: no admite captura clínica.';
 
+/** Datos de la decisión de triage que recordTriage refleja en la atención (F-05, D3). */
+export interface TriageOutcome {
+  level: number;
+  /** Id de la fila de triage_decisions ya insertada en la misma transacción. */
+  decisionId: string;
+  action: 'VALIDATE' | 'CORRECT' | 'MANUAL';
+  /** Enfermera que decide (del token). */
+  actorId: string;
+  /** decided_at = triaged_at = occurred_at (hora del servidor, R20). */
+  now: Date;
+}
+
 const ACTIVE_STATUSES = { notIn: ['CLOSED', 'CANCELLED'] as EncounterStatus[] };
 
 export interface NewEncounter {
@@ -73,6 +85,9 @@ const SUMMARY_SELECT = {
   complaintSource: true,
   cancellationReason: true,
   registeredBy: true,
+  finalLevel: true,
+  triagedAt: true,
+  triagedBy: true,
   preRegistrations: { select: { id: true, preRegisteredAt: true }, take: 1 },
 } as const;
 
@@ -301,18 +316,69 @@ export class EncountersService {
   }
 
   /**
+   * Única vía a TRIAGED (F-05-api, D3, R9, R11): la llama solo TriageDecisionsService, en la transacción en la que
+   * insertó la decisión. UPDATE condicional sobre WAITING_TRIAGE (0 filas → 409) que fija final_level, triaged_at y
+   * triaged_by, un solo evento TRIAGE_DECIDED (from/to y payload { decisionId, action }) y la auditoría TRIAGE_DECIDED
+   * ({ encounterId, action }). Ni el nivel ni el motivo van en el evento ni en la auditoría (R21).
+   */
+  async recordTriage(
+    tenantId: string,
+    id: string,
+    o: TriageOutcome,
+    tx: PrismaTx,
+  ): Promise<void> {
+    const { count } = await tx.encounter.updateMany({
+      where: { id, tenantId, status: 'WAITING_TRIAGE' },
+      data: {
+        status: 'TRIAGED',
+        finalLevel: o.level,
+        triagedAt: o.now,
+        triagedBy: o.actorId,
+      },
+    });
+    if (count === 0) throw new ConflictException(INVALID_TRANSITION);
+    await this.events.append(
+      {
+        tenantId,
+        encounterId: id,
+        type: 'TRIAGE_DECIDED',
+        fromStatus: 'WAITING_TRIAGE',
+        toStatus: 'TRIAGED',
+        payload: { decisionId: o.decisionId, action: o.action },
+        actor: { type: 'STAFF', id: o.actorId },
+        occurredAt: o.now,
+      },
+      tx,
+    );
+    await this.audit.record(
+      {
+        action: 'TRIAGE_DECIDED',
+        actorType: 'STAFF',
+        actorId: o.actorId,
+        tenantId,
+        entity: 'triage_decisions',
+        entityId: o.decisionId,
+        metadata: { encounterId: id, action: o.action },
+      },
+      tx,
+    );
+  }
+
+  /**
    * Bloqueo de la atención durante una captura clínica de F-03 (D5): UPDATE condicional de updated_at (hora del
    * servidor) sobre la atención del tenant en WAITING_TRIAGE, dentro de la transacción de la captura. La fila queda
    * bloqueada hasta el commit, así que una cancelación concurrente espera, y si la cancelación se confirmó antes, el
    * UPDATE no encuentra la fila en WAITING_TRIAGE (R11). 0 filas → 404 si no existe en el tenant (R12) o 409 (R11).
    * El evento de la captura (VITAL_SIGNS_RECORDED o SYMPTOM_FINDINGS_RECORDED) va en la misma transacción.
    * No modifica chief_complaint_text ni complaint_source (R10).
+   * F-05 (D2) lo reutiliza para la decisión de triage con su propio texto del 409 (conflictDetail).
    */
   async lockForCapture(
     tenantId: string,
     id: string,
     now: Date,
     tx: PrismaTx,
+    conflictDetail: string = NOT_WAITING_TRIAGE,
   ): Promise<void> {
     if (!isUuid(id)) throw new NotFoundException(NOT_FOUND);
     const { count } = await tx.encounter.updateMany({
@@ -322,7 +388,7 @@ export class EncountersService {
     if (count === 1) return;
     const exists = await tx.encounter.count({ where: { id, tenantId } });
     if (!exists) throw new NotFoundException(NOT_FOUND);
-    throw new ConflictException(NOT_WAITING_TRIAGE);
+    throw new ConflictException(conflictDetail);
   }
 
   /**
@@ -451,6 +517,7 @@ export class EncountersService {
       ),
       this.users.findNames(tenantId, [
         ...rows.map((r) => r.registeredBy),
+        ...rows.flatMap((r) => (r.triagedBy ? [r.triagedBy] : [])),
         ...extraStaffIds,
       ]),
     ]);
@@ -475,6 +542,12 @@ export class EncountersService {
             fullName: names.get(r.registeredBy) ?? null,
           },
           patient: patients.get(r.patientId)!,
+          // F-05 (R17): solo en las vistas de personal; los DTO del paciente no los llevan (R18).
+          finalLevel: r.finalLevel,
+          triagedAt: r.triagedAt?.toISOString() ?? null,
+          triagedBy: r.triagedBy
+            ? { id: r.triagedBy, fullName: names.get(r.triagedBy) ?? null }
+            : null,
         },
       };
     });

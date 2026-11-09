@@ -36,11 +36,17 @@ describe('F-02: restricciones y permisos de la base (como asclepio_app)', () => 
       )
     ).id;
 
+  // En TRIAGED, IN_CARE y CLOSED fija también el nivel final que exige el CHECK de F-05 (R11).
   const encounter = (patientId: string, status = 'WAITING_TRIAGE') =>
     db.query<{ id: string }>(
       `INSERT INTO asclepio.encounters
-         (tenant_id, site_id, patient_id, status, origin, arrival_at, chief_complaint_text, complaint_source, registered_by)
-       VALUES ($1, $2, $3, $4::asclepio.encounter_status, 'DIRECT', now(), 'DEV-test', 'TYPED', $5) RETURNING id`,
+         (tenant_id, site_id, patient_id, status, origin, arrival_at, chief_complaint_text, complaint_source, registered_by,
+          final_level, triaged_at, triaged_by)
+       SELECT $1, $2, $3, s, 'DIRECT', now(), 'DEV-test', 'TYPED', $5,
+              CASE WHEN f THEN 3 END, CASE WHEN f THEN now() END, CASE WHEN f THEN $5::uuid END
+       FROM (SELECT $4::asclepio.encounter_status AS s) x,
+            LATERAL (SELECT x.s IN ('TRIAGED', 'IN_CARE', 'CLOSED') AS f) y
+       RETURNING id`,
       [tenantId, siteId, patientId, status, userId],
     );
 

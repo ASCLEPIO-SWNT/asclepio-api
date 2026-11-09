@@ -5,7 +5,7 @@ import { buildOpenApiDocument } from '../src/app.setup.js';
 import { VITAL_SIGN_DEFINITIONS } from '../src/modules/encounters/vital-signs.rules.js';
 import { createApp } from './e2e-app.js';
 
-describe('Contrato OpenAPI 0.5.x (e2e, sin base)', () => {
+describe('Contrato OpenAPI 0.6.x (e2e, sin base)', () => {
   let app: INestApplication<App>;
   beforeAll(async () => {
     app = await createApp();
@@ -23,6 +23,7 @@ describe('Contrato OpenAPI 0.5.x (e2e, sin base)', () => {
       '/api/v1/encounters/{id}/cancel',
       '/api/v1/encounters/{id}/clinical-capture',
       '/api/v1/encounters/{id}/symptom-findings',
+      '/api/v1/encounters/{id}/triage-decision',
       '/api/v1/encounters/{id}/triage-suggestions',
       '/api/v1/encounters/{id}/vital-signs',
       '/api/v1/health',
@@ -99,9 +100,9 @@ describe('Contrato OpenAPI 0.5.x (e2e, sin base)', () => {
     for (const op of ops) expect(op?.security).toEqual([{ bearer: [] }]);
   });
 
-  it('R21: los tres endpoints de F-03 declaran el esquema bearer y sus respuestas (F-03 publicó 0.4.0; F-04 sube a 0.5.0)', () => {
+  it('R21: los tres endpoints de F-03 declaran el esquema bearer y sus respuestas (F-03 publicó 0.4.0; F-04 subió a 0.5.0 y F-05 a 0.6.0)', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.5.0');
+    expect(doc.info.version).toBe('0.6.0');
     const vs = doc.paths['/api/v1/encounters/{id}/vital-signs'].post;
     const sf = doc.paths['/api/v1/encounters/{id}/symptom-findings'].post;
     const cc = doc.paths['/api/v1/encounters/{id}/clinical-capture'].get;
@@ -112,9 +113,9 @@ describe('Contrato OpenAPI 0.5.x (e2e, sin base)', () => {
     expect(cc?.responses['200']).toBeDefined();
   });
 
-  it('R1: info.version es 0.5.0 y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
+  it('R1: info.version es 0.6.0 (F-04 publicó 0.5.0) y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.5.0');
+    expect(doc.info.version).toBe('0.6.0');
     const path = doc.paths['/api/v1/encounters/{id}/triage-suggestions'];
     for (const op of [path.post, path.get]) {
       expect(op?.security).toEqual([{ bearer: [] }]);
@@ -374,5 +375,165 @@ describe('Contrato OpenAPI 0.5.x (e2e, sin base)', () => {
     expect(doc.components?.schemas?.PatientMeDto).toMatchObject({
       required: expect.arrayContaining(['identityVerified']) as string[],
     });
+  });
+
+  // ---------------------------------------------------------------- F-05-api (0.6.0)
+
+  it('R16: info.version es 0.6.0 y POST/GET /encounters/{id}/triage-decision declaran bearer, TriageDecisionDto y problem+json', () => {
+    const doc = buildOpenApiDocument(app);
+    expect(doc.info.version).toBe('0.6.0');
+    const path = doc.paths['/api/v1/encounters/{id}/triage-decision'];
+    for (const op of [path.post, path.get]) {
+      expect(op?.security).toEqual([{ bearer: [] }]);
+      expect(op?.responses.default).toMatchObject({
+        content: { 'application/problem+json': expect.any(Object) as object },
+      });
+    }
+    const dto = {
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/TriageDecisionDto' },
+        },
+      },
+    };
+    expect(path.post?.responses['201']).toMatchObject(dto);
+    expect(path.get?.responses['200']).toMatchObject(dto);
+  });
+
+  it('R4: el cuerpo del POST es un oneOf de VALIDATE, CORRECT y MANUAL con discriminador action, sin campos de hora, responsable ni tenant', () => {
+    const doc = buildOpenApiDocument(app);
+    const body = doc.paths['/api/v1/encounters/{id}/triage-decision'].post
+      ?.requestBody as {
+      required: boolean;
+      content: { 'application/json': { schema: Record<string, unknown> } };
+    };
+    expect(body.required).toBe(true);
+    const ref = (n: string) => `#/components/schemas/${n}`;
+    expect(body.content['application/json'].schema).toEqual({
+      oneOf: [
+        { $ref: ref('ValidateTriageDecisionRequest') },
+        { $ref: ref('CorrectTriageDecisionRequest') },
+        { $ref: ref('ManualTriageDecisionRequest') },
+      ],
+      discriminator: {
+        propertyName: 'action',
+        mapping: {
+          VALIDATE: ref('ValidateTriageDecisionRequest'),
+          CORRECT: ref('CorrectTriageDecisionRequest'),
+          MANUAL: ref('ManualTriageDecisionRequest'),
+        },
+      },
+    });
+    const schema = (n: string) =>
+      doc.components?.schemas?.[n] as {
+        properties: Record<
+          string,
+          {
+            enum?: string[];
+            minimum?: number;
+            maximum?: number;
+            maxLength?: number;
+          }
+        >;
+        required: string[];
+      };
+    const expected: [string, string[]][] = [
+      ['ValidateTriageDecisionRequest', ['action', 'suggestionId']],
+      [
+        'CorrectTriageDecisionRequest',
+        ['action', 'suggestionId', 'level', 'reason'],
+      ],
+      ['ManualTriageDecisionRequest', ['action', 'level']],
+    ];
+    for (const [name, fields] of expected) {
+      const s = schema(name);
+      expect([name, Object.keys(s.properties).sort()]).toEqual([
+        name,
+        [...fields].sort(),
+      ]);
+      expect(s.required.sort()).toEqual([...fields].sort());
+    }
+    expect(schema('CorrectTriageDecisionRequest').properties).toMatchObject({
+      action: { enum: ['CORRECT'] },
+      level: { minimum: 1, maximum: 5 },
+      reason: { maxLength: 500 },
+    });
+    expect(
+      schema('ManualTriageDecisionRequest').properties.level,
+    ).toMatchObject({ minimum: 1, maximum: 5 });
+  });
+
+  it('R15: TriageDecisionDto documenta id, encounterId, action, level, suggestionId, suggestedLevel, reason, decidedAt y decidedBy', () => {
+    const doc = buildOpenApiDocument(app);
+    const s = doc.components?.schemas?.TriageDecisionDto as {
+      properties: Record<string, { nullable?: boolean }>;
+      required: string[];
+    };
+    const fields = [
+      'id',
+      'encounterId',
+      'action',
+      'level',
+      'suggestionId',
+      'suggestedLevel',
+      'reason',
+      'decidedAt',
+      'decidedBy',
+    ];
+    expect(Object.keys(s.properties).sort()).toEqual([...fields].sort());
+    expect(s.required.sort()).toEqual([...fields].sort());
+    for (const f of ['suggestionId', 'suggestedLevel', 'reason']) {
+      expect([f, s.properties[f].nullable]).toEqual([f, true]);
+    }
+  });
+
+  it('R17: EncounterSummaryDto añade finalLevel, triagedAt y triagedBy anulables y EncounterEventDto.type documenta TRIAGE_DECIDED; los esquemas del paciente no cambian', () => {
+    const doc = buildOpenApiDocument(app);
+    const s = doc.components?.schemas?.EncounterSummaryDto as {
+      properties: Record<string, { nullable?: boolean }>;
+    };
+    for (const f of ['finalLevel', 'triagedAt', 'triagedBy']) {
+      expect([f, s.properties[f]?.nullable]).toEqual([f, true]);
+    }
+    const ev = doc.components?.schemas?.EncounterEventDto as {
+      properties: Record<string, { enum?: string[]; description?: string }>;
+    };
+    expect(ev.properties.type.enum).toContain('TRIAGE_DECIDED');
+    expect(ev.properties.type.description).toMatch(/TRIAGE_DECIDED/);
+    for (const name of [
+      'PatientPreRegistrationDto',
+      'EncounterRefDto',
+      'PatientProfileDto',
+    ]) {
+      const schema = doc.components?.schemas?.[name];
+      expect([name, schema]).toEqual([name, expect.any(Object)]);
+      expect(JSON.stringify(schema)).not.toMatch(
+        /finalLevel|triagedAt|triagedBy/,
+      );
+    }
+  });
+
+  it('R22: el POST documenta 201, 400, 401, 403, 404, 409, 422 y el GET 200, 401, 403, 404 como problem+json', () => {
+    const doc = buildOpenApiDocument(app);
+    const path = doc.paths['/api/v1/encounters/{id}/triage-decision'];
+    expect(Object.keys(path.post?.responses ?? {}).sort()).toEqual(
+      ['201', '400', '401', '403', '404', '409', '422', 'default'].sort(),
+    );
+    expect(Object.keys(path.get?.responses ?? {}).sort()).toEqual(
+      ['200', '401', '403', '404', 'default'].sort(),
+    );
+    for (const [code, res] of Object.entries({
+      ...path.post?.responses,
+    })) {
+      if (code === '201') continue;
+      expect([code, res]).toMatchObject([
+        code,
+        {
+          content: {
+            'application/problem+json': expect.any(Object) as object,
+          },
+        },
+      ]);
+    }
   });
 });

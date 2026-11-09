@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import type { StaffPrincipal } from '../../common/auth/principal.js';
 import { Clock } from '../../common/clock/clock.js';
-import { PrismaService } from '../../common/prisma/prisma.service.js';
+import {
+  PrismaService,
+  type PrismaTx,
+} from '../../common/prisma/prisma.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { AuditService } from '../audit/audit.service.js';
 import { ClinicalCaptureService } from '../encounters/clinical-capture.service.js';
@@ -47,6 +50,13 @@ const ROW_SELECT = {
 } as const;
 
 type Row = Prisma.TriageSuggestionGetPayload<{ select: typeof ROW_SELECT }>;
+
+/** Sugerencia vigente para la decisión de triage de F-05 (D2): id, estado y nivel sugerido (ya ajustado). */
+export interface CurrentSuggestionRow {
+  id: string;
+  status: 'OK' | 'INVALID_OUTPUT' | 'TIMEOUT' | 'FAILED';
+  suggestedLevel: number | null;
+}
 
 /**
  * Dueño de triage_suggestions (solo INSERT y SELECT, R24). Lee la captura vía ClinicalCaptureService (D1), llama al
@@ -174,6 +184,34 @@ export class TriageSuggestionsService {
       tenantId,
     });
     return { items: rows.map((r) => toDto(r, names)) };
+  }
+
+  /**
+   * Sugerencia vigente de la atención del tenant (R21 de F-04: mayor created_at y después mayor id), dentro de la
+   * transacción de la decisión de F-05 (D2); null si no hay ninguna o la atención es de otro tenant.
+   */
+  findCurrent(
+    tenantId: string,
+    encounterId: string,
+    tx: PrismaTx,
+  ): Promise<CurrentSuggestionRow | null> {
+    return tx.triageSuggestion.findFirst({
+      where: { tenantId, encounterId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { id: true, status: true, suggestedLevel: true },
+    });
+  }
+
+  /** Nivel sugerido (ya ajustado) de una sugerencia del tenant, para el GET de la decisión de F-05 (R15, R16). */
+  async findSuggestedLevel(
+    tenantId: string,
+    suggestionId: string,
+  ): Promise<number | null> {
+    const row = await this.prisma.triageSuggestion.findFirst({
+      where: { id: suggestionId, tenantId },
+      select: { suggestedLevel: true },
+    });
+    return row?.suggestedLevel ?? null;
   }
 }
 

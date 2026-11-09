@@ -48,5 +48,7 @@ export class AiCoreModule {}
   imports: [AiCoreModule, EncountersModule, AuditModule, UsersModule],
   controllers: [TriageSuggestionsController],
   providers: [TriageSuggestionsService],
+  // F-05-api: triage lee la sugerencia vigente y su nivel (findCurrent, findSuggestedLevel).
+  exports: [TriageSuggestionsService],
 })
 export class AiModule {}

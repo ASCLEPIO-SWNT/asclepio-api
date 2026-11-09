@@ -1,1 +1,1 @@
-Decisiones humanas VALIDATE/CORRECT/MANUAL; tabla triage_decisions. Llega con F-05-api.
+Decisión de triage de enfermería (F-05-api): `VALIDATE`/`CORRECT`/`MANUAL` (`triage-decision.rules.ts`, `dto/triage-decision.dto.ts`), `TriageDecisionsService` y `TriageDecisionsController` (`POST`/`GET /encounters/{id}/triage-decision`); tabla `triage_decisions` (solo inserciones, una por atención). Única vía a `TRIAGED` vía `EncountersService.recordTriage`. Ver docs/architecture.md, sección "Decisión de triage (F-05)".

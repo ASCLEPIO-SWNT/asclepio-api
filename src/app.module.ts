@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { EncountersModule } from './modules/encounters/encounters.module.js';
 import { PatientsHttpModule } from './modules/patients/patients.module.js';
 import { TenancyHttpModule } from './modules/tenancy/tenancy.module.js';
+import { TriageModule } from './modules/triage/triage.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
 // Los módulos de dominio (src/modules/*) se registran aquí según llegan sus features.
@@ -26,6 +27,7 @@ import { UsersModule } from './modules/users/users.module.js';
     AuthModule,
     EncountersModule,
     AiModule,
+    TriageModule,
   ],
   controllers: [HealthController],
 })

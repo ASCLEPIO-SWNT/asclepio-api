@@ -59,13 +59,20 @@ export class F03Fixtures {
     return (res.body as { id: string }).id;
   }
 
-  /** Cambia el estado como dueño de la base (DIRECT_URL), para preparar estados a los que aún no llega la API. */
+  /**
+   * Cambia el estado como dueño de la base (DIRECT_URL), para preparar estados a los que aún no llega la API. En
+   * TRIAGED, IN_CARE y CLOSED fija también final_level, triaged_at y triaged_by (CHECK de F-05, R11).
+   */
   async setStatus(id: string, status: EncounterStatusName): Promise<void> {
     const owner = new pg.Client({ connectionString: process.env.DIRECT_URL });
     await owner.connect();
     try {
       await owner.query(
-        'UPDATE asclepio.encounters SET status = $2::asclepio.encounter_status WHERE id = $1',
+        `UPDATE asclepio.encounters SET status = $2::asclepio.encounter_status,
+           final_level = CASE WHEN $2 IN ('TRIAGED', 'IN_CARE', 'CLOSED') THEN 3 ELSE final_level END,
+           triaged_at = CASE WHEN $2 IN ('TRIAGED', 'IN_CARE', 'CLOSED') THEN now() ELSE triaged_at END,
+           triaged_by = CASE WHEN $2 IN ('TRIAGED', 'IN_CARE', 'CLOSED') THEN registered_by ELSE triaged_by END
+         WHERE id = $1`,
         [id, status],
       );
     } finally {

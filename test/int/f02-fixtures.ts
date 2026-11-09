@@ -7,6 +7,21 @@ import { TokenService } from '../../src/modules/auth/token.service.js';
 import { testName } from './db.js';
 import { randomDoc } from './fixtures.js';
 
+const TRIAGE_REQUIRED = new Set(['TRIAGED', 'IN_CARE', 'CLOSED']);
+
+/**
+ * Columnas de triage que exige el CHECK de F-05 (R11) cuando una prueba fuerza en la base TRIAGED, IN_CARE o CLOSED
+ * sin pasar por la decisión de triage. En los demás estados no añade nada.
+ */
+export function forcedTriage(
+  status: string,
+  triagedBy: string,
+): { finalLevel?: number; triagedAt?: Date; triagedBy?: string } {
+  return TRIAGE_REQUIRED.has(status)
+    ? { finalLevel: 3, triagedAt: new Date(), triagedBy }
+    : {};
+}
+
 export interface Staff {
   id: string;
   fullName: string;

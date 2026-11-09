@@ -374,11 +374,10 @@ describe('F-04: POST /encounters/{id}/triage-suggestions (integración, LlmClien
     expect(
       await fx.prisma.encounterEvent.count({ where: { encounterId: id } }),
     ).toBe(events);
-    // triage_decisions aún no existe (llega con F-05): se comprueba que no hay ninguna tabla nueva de decisiones.
-    const tables = await fx.prisma.$queryRaw<{ n: bigint }[]>`
-      SELECT count(*) AS n FROM information_schema.tables
-      WHERE table_schema = 'asclepio' AND table_name = 'triage_decisions'`;
-    expect(Number(tables[0].n)).toBe(0);
+    // F-05 creó triage_decisions: la sugerencia no inserta ninguna decisión.
+    expect(
+      await fx.prisma.triageDecision.count({ where: { encounterId: id } }),
+    ).toBe(0);
   });
 
   it('R25: inserta en la misma transacción la auditoría TRIAGE_SUGGESTION_CREATED con encounterId, status y guardApplied, sin niveles', async () => {

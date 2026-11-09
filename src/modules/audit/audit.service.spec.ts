@@ -167,6 +167,30 @@ describe('AuditService', () => {
     ]);
   });
 
+  it('R21: rechaza en metadata y payload el nivel final y el motivo de corrección (F-05); admite encounterId, action y decisionId, y sigue admitiendo reason de F-01', () => {
+    for (const key of [
+      'finalLevel',
+      'final_level',
+      'correctionReason',
+      'correction_reason',
+      'level',
+    ]) {
+      expect(() => assertSafeMetadata({ [key]: 1 })).toThrow(/metadata/);
+      expect(() => assertSafeMetadata({ nested: [{ [key]: 1 }] })).toThrow(
+        /metadata/,
+      );
+    }
+    expect(() =>
+      assertSafeMetadata({
+        encounterId: '6f1c1d2e-0000-4000-8000-000000000002',
+        action: 'CORRECT',
+        decisionId: '6f1c1d2e-0000-4000-8000-000000000003',
+      }),
+    ).not.toThrow();
+    // F-01 (AUTH_LOGIN_FAILED) usa reason para códigos: no se prohíbe (enmienda 2026-11-09).
+    expect(() => assertSafeMetadata({ reason: 'BAD_PASSWORD' })).not.toThrow();
+  });
+
   it('R32: record no inserta nada si la metadata trae datos personales', async () => {
     const { svc, calls } = setup();
     await expect(

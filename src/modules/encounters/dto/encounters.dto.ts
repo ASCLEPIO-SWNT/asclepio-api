@@ -206,9 +206,10 @@ export class EncounterEventDto {
       'STATUS_CHANGED',
       'VITAL_SIGNS_RECORDED',
       'SYMPTOM_FINDINGS_RECORDED',
+      'TRIAGE_DECIDED',
     ],
     description:
-      'Tipo de evento. F-02: ENCOUNTER_CREATED, STATUS_CHANGED. F-03: VITAL_SIGNS_RECORDED (payload { vitalSignsId }) y SYMPTOM_FINDINGS_RECORDED (payload { findingIds, count }), sin fromStatus/toStatus ni valores clínicos. Las features siguientes añaden tipos: los clientes deben tolerar tipos desconocidos.',
+      'Tipo de evento. F-02: ENCOUNTER_CREATED, STATUS_CHANGED. F-03: VITAL_SIGNS_RECORDED (payload { vitalSignsId }) y SYMPTOM_FINDINGS_RECORDED (payload { findingIds, count }), sin fromStatus/toStatus ni valores clínicos. F-05: TRIAGE_DECIDED (fromStatus WAITING_TRIAGE, toStatus TRIAGED, payload { decisionId, action }), sin el nivel ni el motivo. Las features siguientes añaden tipos: los clientes deben tolerar tipos desconocidos.',
   })
   type: string;
   @ApiProperty({ enum: ENCOUNTER_STATUSES, type: String, nullable: true })
@@ -242,6 +243,29 @@ export class EncounterSummaryDto {
     string | null;
   @ApiProperty({ type: StaffRefDto }) registeredBy: StaffRefDto;
   @ApiProperty({ type: PatientDto }) patient: PatientDto;
+  @ApiProperty({
+    type: 'integer',
+    minimum: 1,
+    maximum: 5,
+    nullable: true,
+    description:
+      'Nivel final de triage decidido por enfermería (F-05, POST /encounters/{id}/triage-decision); null hasta la decisión.',
+  })
+  finalLevel: number | null;
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    description:
+      'Hora del servidor de la decisión de triage; null hasta la decisión.',
+  })
+  triagedAt: string | null;
+  @ApiProperty({
+    type: StaffRefDto,
+    nullable: true,
+    description: 'Enfermera que decidió el triage; null hasta la decisión.',
+  })
+  triagedBy: StaffRefDto | null;
 }
 
 export class EncounterDto extends EncounterSummaryDto {

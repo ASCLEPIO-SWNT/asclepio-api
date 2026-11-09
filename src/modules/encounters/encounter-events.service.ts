@@ -11,7 +11,9 @@ export type EncounterEventType =
   | 'STATUS_CHANGED'
   // F-03-api (R14, R15): sin from/to; payload solo con ids y conteos (D9).
   | 'VITAL_SIGNS_RECORDED'
-  | 'SYMPTOM_FINDINGS_RECORDED';
+  | 'SYMPTOM_FINDINGS_RECORDED'
+  // F-05-api (R9): WAITING_TRIAGE → TRIAGED; payload solo { decisionId, action } (R21).
+  | 'TRIAGE_DECIDED';
 export type ActorType = 'STAFF' | 'PATIENT' | 'SYSTEM';
 
 export interface Actor {

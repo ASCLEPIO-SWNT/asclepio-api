@@ -225,6 +225,16 @@ Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 - Permisos: `asclepio_app` solo `SELECT` e `INSERT` (append-only). La sugerencia **nunca** modifica `encounters` ni crea `triage_decisions`; su auditoría (`TRIAGE_SUGGESTION_CREATED`, metadata `{ encounterId, status, guardApplied }`) va en la misma transacción. Sin `encounter_event` (D13).
 - `raw_response` puede contener texto clínico ya saneado: nunca se expone por la API ni se registra en logs (igual que `input_snapshot` y `attempts`).
 
+### F-05-api (migraciones `f05_triage_decisions` y `f05_app_role_grants`; PA-F05-1..3 resueltas el 2026-11-09)
+
+- **Dueño:** `triage`. **Una decisión por atención** (PA-F05-1, sin re-triage en el MVP): `UNIQUE (encounter_id)`.
+- `triage_decisions`: `tenant_id`, `encounter_id`, `suggestion_id` (NULL en `MANUAL`), `action` (enum `triage_decision_action`: `VALIDATE`, `CORRECT`, `MANUAL`), `level smallint` (1–5), `reason text` (motivo de corrección, solo en `CORRECT`, guardado sin espacios extremos), `decided_by` (→ `users`) y `decided_at` (hora del servidor, sin default).
+- FKs, todas `ON DELETE RESTRICT ON UPDATE RESTRICT`: `tenant_id → tenants`, `(encounter_id, tenant_id) → encounters(id, tenant_id)`, `decided_by → users` y la compuesta **`(suggestion_id, encounter_id) → triage_suggestions(id, encounter_id)`** (MATCH SIMPLE: no se comprueba en `MANUAL`), que impide en la base decidir con la sugerencia de otra atención. Su destino es el **`UNIQUE (id, encounter_id)` nuevo de `triage_suggestions`** (`triage_suggestions_id_encounter_id_key`; no cambia sus datos).
+- CHECK (bloque manual de `f05_triage_decisions`): `triage_decisions_manual_without_suggestion` (`(action = 'MANUAL') = (suggestion_id IS NULL)`), `triage_decisions_reason_only_in_correct` (`(action = 'CORRECT') = (reason IS NOT NULL)`), `triage_decisions_reason_length` (`char_length(btrim(reason))` entre 1 y 500) y `triage_decisions_level_range` (1–5). Que `VALIDATE` tome el nivel sugerido y que `CORRECT` sea distinto se garantiza en código (`triage-decision.rules.ts`).
+- `encounters` (dueño `encounters`): columnas `final_level smallint`, `triaged_at timestamptz` y `triaged_by uuid` (→ `users`, RESTRICT), todas NULL hasta la decisión. CHECK `encounters_final_level_range` (1–5), `encounters_triage_all_or_none` (las tres nulas o las tres no nulas) y `encounters_triage_required` (no nulas en `TRIAGED`, `IN_CARE` y `CLOSED`; una atención `CANCELLED` puede tenerlas o no). Solo las fija `EncountersService.recordTriage`, en la misma transacción que la decisión, el evento `TRIAGE_DECIDED` (`payload { decisionId, action }`) y la auditoría `TRIAGE_DECIDED` (`metadata { encounterId, action }`): ni el nivel ni el motivo van en eventos, auditoría ni logs (R21).
+- Permisos: `asclepio_app` solo `SELECT` e `INSERT` sobre `triage_decisions` (append-only). `encounters` ya tenía `UPDATE` a nivel de tabla (f02).
+- Antes de aplicar la migración en una base con datos hay que comprobar que no hay atenciones en `TRIAGED`/`IN_CARE`/`CLOSED` (el CHECK `encounters_triage_required` fallaría). Las pruebas de integración que fuerzan esos estados como dueño de la base fijan también las tres columnas.
+
 ### Pendiente (preguntas abiertas)
 
 - Validación clínica de la lista de signos y de los rangos provisionales de F-03 por un asesor clínico.

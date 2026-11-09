@@ -26,7 +26,9 @@ export type AuditAction =
   | 'VITAL_SIGNS_RECORDED'
   | 'SYMPTOM_FINDINGS_RECORDED'
   // F-04-api
-  | 'TRIAGE_SUGGESTION_CREATED';
+  | 'TRIAGE_SUGGESTION_CREATED'
+  // F-05-api
+  | 'TRIAGE_DECIDED';
 
 export type AuditJson =
   string | number | boolean | null | AuditJson[] | { [key: string]: AuditJson };
@@ -95,6 +97,10 @@ const FORBIDDEN_KEYS = new Set([
   'explanation',
   'factors',
   'prompt',
+  // F-05-api (R21): la decisión se audita solo con encounterId y action (y el evento con decisionId y action); nunca
+  // el nivel final ni el motivo de corrección. 'reason' no se prohíbe: F-01 la usa para códigos (enmienda 2026-11-09).
+  'finallevel',
+  'correctionreason',
 ]);
 
 /** Lanza si la metadata contiene (a cualquier profundidad) una clave con datos personales o secretos. */

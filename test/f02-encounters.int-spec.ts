@@ -7,7 +7,12 @@ import { AuditService } from '../src/modules/audit/audit.service.js';
 import { EncountersService } from '../src/modules/encounters/encounters.service.js';
 import { createApp, problem } from './e2e-app.js';
 import { FailingAuditService } from './int/failing-audit.js';
-import { COMPLAINT, F02Fixtures, type Staff } from './int/f02-fixtures.js';
+import {
+  COMPLAINT,
+  F02Fixtures,
+  forcedTriage,
+  type Staff,
+} from './int/f02-fixtures.js';
 
 const NOW = new Date('2026-10-26T15:00:00.000Z');
 
@@ -220,7 +225,7 @@ describe('Registro directo, máquina de estados, cancelación y consulta de aten
     // TRIAGED solo llegará por F-05 (triage_decisions): la prueba lo prepara directamente en la base.
     await fx.prisma.encounter.update({
       where: { id },
-      data: { status: 'TRIAGED' },
+      data: { status: 'TRIAGED', ...forcedTriage('TRIAGED', nurse.id) },
     });
     await prisma().$transaction((tx) =>
       svc().transition(t.id, id, 'IN_CARE', staffActor(), tx),
@@ -298,7 +303,10 @@ describe('Registro directo, máquina de estados, cancelación y consulta de aten
       ['IN_CARE', nurse.token],
     ] as const) {
       const { id } = await newEncounter();
-      await fx.prisma.encounter.update({ where: { id }, data: { status } });
+      await fx.prisma.encounter.update({
+        where: { id },
+        data: { status, ...forcedTriage(status, nurse.id) },
+      });
       clock.set(new Date(NOW.getTime() + 60_000));
       const res = await cancel(
         id,
@@ -404,7 +412,7 @@ describe('Registro directo, máquina de estados, cancelación y consulta de aten
     const b = await newEncounter();
     await fx.prisma.encounter.update({
       where: { id: b.id },
-      data: { status: 'CLOSED' },
+      data: { status: 'CLOSED', ...forcedTriage('CLOSED', nurse.id) },
     });
     await cancel(b.id, { reason: 'DEV-test' }).expect(409);
     expect(
@@ -506,6 +514,8 @@ describe('Registro directo, máquina de estados, cancelación y consulta de aten
         'chiefComplaintText',
         'complaintSource',
         'events',
+        // F-05-api (R17): nivel final, hora y responsable del triage (null hasta la decisión).
+        'finalLevel',
         'id',
         'origin',
         'patient',
@@ -515,6 +525,8 @@ describe('Registro directo, máquina de estados, cancelación y consulta de aten
         'siteId',
         'siteName',
         'status',
+        'triagedAt',
+        'triagedBy',
       ]);
       expect(enc).toMatchObject({
         status: 'CANCELLED',
