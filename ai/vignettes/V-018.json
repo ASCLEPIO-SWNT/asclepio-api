@@ -1,0 +1,34 @@
+{
+  "id": "V-018",
+  "title": "Solicitud de fórmula de medicamento crónico",
+  "input": {
+    "age_years": 55,
+    "sex": "M",
+    "chief_complaint_text": "necesita la fórmula de su medicamento para la presión, no tiene síntomas",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 16,
+      "spo2": 98,
+      "supplemental_oxygen": false,
+      "systolic_bp": 132,
+      "diastolic_bp": 84,
+      "heart_rate": 76,
+      "consciousness": "A",
+      "temperature_c": 36.8,
+      "glucose_mg_dl": null
+    },
+    "symptom_findings": []
+  },
+  "expected": {
+    "level": 5,
+    "acceptable_levels": [
+      4,
+      5
+    ],
+    "must_mention_factors": [
+      "chief_complaint_text"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

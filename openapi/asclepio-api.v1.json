@@ -1261,12 +1261,117 @@
           "clinical-capture"
         ]
       }
+    },
+    "/api/v1/encounters/{id}/triage-suggestions": {
+      "post": {
+        "description": "La sugerencia es una PROPUESTA, nunca una decisión: no cambia la atención ni asigna el nivel final (lo decide enfermería en F-05). suggestedLevel puede ser más grave que llmLevel porque los SafetyGuards (PROVISIONALES) solo suben la gravedad. Solo con la atención en WAITING_TRIAGE y al menos una toma de signos vitales (si no, 409). Responde 201 también si el LLM falla (status INVALID_OUTPUT, TIMEOUT o FAILED): la web ofrece el triage manual. Cada solicitud guarda una sugerencia nueva.",
+        "operationId": "TriageSuggestionsController_request",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "description": "Sin cuerpo o {}. Cualquier campo → 400.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriageSuggestionDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error en application/problem+json (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Pide una sugerencia de nivel de triage al LLM",
+        "tags": [
+          "triage-suggestions"
+        ]
+      },
+      "get": {
+        "description": "La sugerencia es una PROPUESTA, nunca una decisión: no cambia la atención ni asigna el nivel final (lo decide enfermería en F-05). suggestedLevel puede ser más grave que llmLevel porque los SafetyGuards (PROVISIONALES) solo suben la gravedad. items[0] es la sugerencia vigente. Se puede leer en cualquier estado de la atención.",
+        "operationId": "TriageSuggestionsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriageSuggestionListDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error en application/problem+json (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lista las sugerencias de la atención (la más reciente primero)",
+        "tags": [
+          "triage-suggestions"
+        ]
+      }
     }
   },
   "info": {
     "title": "Asclepio API",
     "description": "Triage de urgencias asistido por IA. La IA propone, el profesional decide.",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "contact": {}
   },
   "tags": [],
@@ -2651,6 +2756,197 @@
           "complaintSource",
           "vitalSigns",
           "symptomFindings"
+        ]
+      },
+      "TriageSuggestionStatus": {
+        "type": "string",
+        "enum": [
+          "OK",
+          "INVALID_OUTPUT",
+          "TIMEOUT",
+          "FAILED"
+        ],
+        "description": "OK: hay nivel sugerido. INVALID_OUTPUT, TIMEOUT o FAILED: no hay nivel y la web ofrece el triage manual."
+      },
+      "TriageFactorDto": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Campo de la entrada que sustenta la sugerencia: age_years, sex, chief_complaint_text, complaint_source, vital_signs.<campo> o symptom_findings[<n>]."
+          },
+          "note": {
+            "type": "string",
+            "description": "Por qué importa ese dato (máx. 200)."
+          }
+        },
+        "required": [
+          "field",
+          "note"
+        ]
+      },
+      "GuardTriggerDto": {
+        "type": "object",
+        "properties": {
+          "news2Total": {
+            "type": "integer",
+            "description": "Puntuación NEWS2 total."
+          },
+          "field": {
+            "type": "string",
+            "description": "Parámetro que disparó la regla (G3), p. ej. vital_signs.heart_rate."
+          },
+          "points": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "news2Total"
+        ]
+      },
+      "GuardReasonDto": {
+        "type": "object",
+        "properties": {
+          "rule": {
+            "type": "string",
+            "description": "Regla (G1, G2 o G3). PROVISIONAL."
+          },
+          "maxLevel": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "trigger": {
+            "$ref": "#/components/schemas/GuardTriggerDto"
+          }
+        },
+        "required": [
+          "rule",
+          "maxLevel",
+          "trigger"
+        ]
+      },
+      "LlmProvider": {
+        "type": "string",
+        "enum": [
+          "GROQ",
+          "OPENROUTER"
+        ]
+      },
+      "TriageSuggestionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "encounterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "description": "OK: hay nivel sugerido. INVALID_OUTPUT, TIMEOUT o FAILED: no hay nivel y la web ofrece el triage manual.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TriageSuggestionStatus"
+              }
+            ]
+          },
+          "suggestedLevel": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "nullable": true,
+            "description": "Nivel sugerido (1 = I, el más grave) tras los SafetyGuards; puede ser más grave que llmLevel. null si status ≠ OK."
+          },
+          "llmLevel": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "nullable": true,
+            "description": "Nivel que propuso el LLM. null si status ≠ OK."
+          },
+          "explanation": {
+            "type": "string",
+            "nullable": true
+          },
+          "factors": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TriageFactorDto"
+            }
+          },
+          "guardApplied": {
+            "type": "boolean",
+            "description": "true si un SafetyGuard subió la gravedad respecto a llmLevel."
+          },
+          "guardReasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuardReasonDto"
+            }
+          },
+          "provider": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LlmProvider"
+              }
+            ]
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "promptVersion": {
+            "type": "string",
+            "example": "triage-v1"
+          },
+          "latencyMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Hora del servidor."
+          },
+          "requestedBy": {
+            "$ref": "#/components/schemas/StaffRefDto"
+          }
+        },
+        "required": [
+          "id",
+          "encounterId",
+          "status",
+          "suggestedLevel",
+          "llmLevel",
+          "explanation",
+          "factors",
+          "guardApplied",
+          "guardReasons",
+          "provider",
+          "model",
+          "promptVersion",
+          "latencyMs",
+          "createdAt",
+          "requestedBy"
+        ]
+      },
+      "TriageSuggestionListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "De la más reciente a la más antigua: items[0] es la vigente.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TriageSuggestionDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "FieldErrorDto": {

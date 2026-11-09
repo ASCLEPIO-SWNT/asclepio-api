@@ -5,7 +5,7 @@ import { buildOpenApiDocument } from '../src/app.setup.js';
 import { VITAL_SIGN_DEFINITIONS } from '../src/modules/encounters/vital-signs.rules.js';
 import { createApp } from './e2e-app.js';
 
-describe('Contrato OpenAPI 0.4.x (e2e, sin base)', () => {
+describe('Contrato OpenAPI 0.5.x (e2e, sin base)', () => {
   let app: INestApplication<App>;
   beforeAll(async () => {
     app = await createApp();
@@ -23,6 +23,7 @@ describe('Contrato OpenAPI 0.4.x (e2e, sin base)', () => {
       '/api/v1/encounters/{id}/cancel',
       '/api/v1/encounters/{id}/clinical-capture',
       '/api/v1/encounters/{id}/symptom-findings',
+      '/api/v1/encounters/{id}/triage-suggestions',
       '/api/v1/encounters/{id}/vital-signs',
       '/api/v1/health',
       '/api/v1/me',
@@ -98,9 +99,9 @@ describe('Contrato OpenAPI 0.4.x (e2e, sin base)', () => {
     for (const op of ops) expect(op?.security).toEqual([{ bearer: [] }]);
   });
 
-  it('R21: info.version es 0.4.0 y los tres endpoints de F-03 declaran el esquema bearer y sus respuestas', () => {
+  it('R21: los tres endpoints de F-03 declaran el esquema bearer y sus respuestas (F-03 publicó 0.4.0; F-04 sube a 0.5.0)', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.4.0');
+    expect(doc.info.version).toBe('0.5.0');
     const vs = doc.paths['/api/v1/encounters/{id}/vital-signs'].post;
     const sf = doc.paths['/api/v1/encounters/{id}/symptom-findings'].post;
     const cc = doc.paths['/api/v1/encounters/{id}/clinical-capture'].get;
@@ -109,6 +110,83 @@ describe('Contrato OpenAPI 0.4.x (e2e, sin base)', () => {
     expect(vs?.responses['201']).toBeDefined();
     expect(sf?.responses['201']).toBeDefined();
     expect(cc?.responses['200']).toBeDefined();
+  });
+
+  it('R1: info.version es 0.5.0 y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
+    const doc = buildOpenApiDocument(app);
+    expect(doc.info.version).toBe('0.5.0');
+    const path = doc.paths['/api/v1/encounters/{id}/triage-suggestions'];
+    for (const op of [path.post, path.get]) {
+      expect(op?.security).toEqual([{ bearer: [] }]);
+      expect(op?.responses.default).toMatchObject({
+        content: { 'application/problem+json': expect.any(Object) as object },
+      });
+      // La sugerencia es una propuesta, nunca una decisión.
+      expect(op?.description).toMatch(/PROPUESTA, nunca una decisión/);
+    }
+    expect(path.post?.responses['201']).toMatchObject({
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/TriageSuggestionDto' },
+        },
+      },
+    });
+    expect(path.get?.responses['200']).toMatchObject({
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/TriageSuggestionListDto' },
+        },
+      },
+    });
+    expect(path.post?.requestBody).toMatchObject({
+      required: false,
+      content: {
+        'application/json': {
+          schema: { type: 'object', additionalProperties: false },
+        },
+      },
+    });
+  });
+
+  it('R22: TriageSuggestionDto documenta los campos de R22 (niveles, explicación, factores, proveedor y modelo anulables) y no expone inputSnapshot, rawResponse ni attempts', () => {
+    const doc = buildOpenApiDocument(app);
+    const schema = doc.components?.schemas?.TriageSuggestionDto as {
+      properties: Record<string, { nullable?: boolean; enum?: string[] }>;
+      required: string[];
+    };
+    expect(Object.keys(schema.properties).sort()).toEqual([
+      'createdAt',
+      'encounterId',
+      'explanation',
+      'factors',
+      'guardApplied',
+      'guardReasons',
+      'id',
+      'latencyMs',
+      'llmLevel',
+      'model',
+      'promptVersion',
+      'provider',
+      'requestedBy',
+      'status',
+      'suggestedLevel',
+    ]);
+    for (const f of [
+      'suggestedLevel',
+      'llmLevel',
+      'explanation',
+      'factors',
+      'provider',
+      'model',
+    ]) {
+      expect([f, schema.properties[f].nullable]).toEqual([f, true]);
+    }
+    expect(doc.components?.schemas?.TriageSuggestionStatus).toMatchObject({
+      enum: ['OK', 'INVALID_OUTPUT', 'TIMEOUT', 'FAILED'],
+    });
+    expect(doc.components?.schemas?.LlmProvider).toMatchObject({
+      enum: ['GROQ', 'OPENROUTER'],
+    });
   });
 
   it('R22: los endpoints de F-03 declaran los errores como application/problem+json', () => {

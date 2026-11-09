@@ -1,0 +1,39 @@
+{
+  "id": "V-008",
+  "title": "Dolor abdominal intenso con fiebre",
+  "input": {
+    "age_years": 35,
+    "sex": "F",
+    "chief_complaint_text": "dolor abdominal intenso 10/10 en la fosa ilíaca derecha, con vómito",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 22,
+      "spo2": 98,
+      "supplemental_oxygen": false,
+      "systolic_bp": 118,
+      "diastolic_bp": 74,
+      "heart_rate": 108,
+      "consciousness": "A",
+      "temperature_c": 38.2,
+      "glucose_mg_dl": null
+    },
+    "symptom_findings": [
+      {
+        "kind": "SYMPTOM",
+        "description": "dolor extremo que no le deja caminar"
+      }
+    ]
+  },
+  "expected": {
+    "level": 2,
+    "acceptable_levels": [
+      1,
+      2
+    ],
+    "must_mention_factors": [
+      "chief_complaint_text"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

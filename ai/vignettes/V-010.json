@@ -1,0 +1,39 @@
+{
+  "id": "V-010",
+  "title": "Dolor epigástrico moderado con náuseas",
+  "input": {
+    "age_years": 28,
+    "sex": "F",
+    "chief_complaint_text": "dolor abdominal en la boca del estómago de 6 horas, con náuseas",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 18,
+      "spo2": 98,
+      "supplemental_oxygen": false,
+      "systolic_bp": 122,
+      "diastolic_bp": 76,
+      "heart_rate": 92,
+      "consciousness": "A",
+      "temperature_c": 37.2,
+      "glucose_mg_dl": null
+    },
+    "symptom_findings": [
+      {
+        "kind": "SYMPTOM",
+        "description": "dolor 6/10"
+      }
+    ]
+  },
+  "expected": {
+    "level": 3,
+    "acceptable_levels": [
+      2,
+      3
+    ],
+    "must_mention_factors": [
+      "chief_complaint_text"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

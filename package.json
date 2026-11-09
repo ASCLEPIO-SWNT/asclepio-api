@@ -26,7 +26,7 @@
     "prisma:generate": "prisma generate",
     "users:create": "npm run -s build && node dist/scripts/users-create.js",
     "sites:create": "npm run -s build && node dist/scripts/sites-create.js",
-    "ai:eval": "node -e \"console.log('ai:eval: marcador. Se implementa en F-04-api (ver docs/verification.md).')\""
+    "ai:eval": "npm run -s build && node dist/scripts/ai-eval.js"
   },
   "jest": {
     "moduleFileExtensions": [

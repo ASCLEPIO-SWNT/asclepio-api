@@ -43,7 +43,8 @@ const INVALID_TRANSITION =
 const TRIAGED_FORBIDDEN =
   'El paso a TRIAGED exige una decisión de triage y no se hace con la transición genérica.';
 const BAD_REFERENCE = 'El paciente o la sede indicados no están disponibles.';
-const NOT_WAITING_TRIAGE =
+/** 409 de F-03 (captura) y de F-04 (sugerencia, D12 de specs/F-04-api/design.md). */
+export const NOT_WAITING_TRIAGE =
   'La atención no está en espera de triage: no admite captura clínica.';
 
 const ACTIVE_STATUSES = { notIn: ['CLOSED', 'CANCELLED'] as EncounterStatus[] };
@@ -324,7 +325,10 @@ export class EncountersService {
     throw new ConflictException(NOT_WAITING_TRIAGE);
   }
 
-  /** Motivo de consulta y estado de la atención del tenant para GET /clinical-capture (R20); null si no existe. */
+  /**
+   * Motivo de consulta, estado y paciente de la atención del tenant para GET /clinical-capture (R20 de F-03) y la
+   * sugerencia de F-04; null si no existe, es de otro tenant o el id no es UUID.
+   */
   findCaptureHeader(
     tenantId: string,
     id: string,
@@ -332,11 +336,17 @@ export class EncountersService {
     status: EncounterStatus;
     chiefComplaintText: string;
     complaintSource: ComplaintSource;
+    patientId: string;
   } | null> {
     if (!isUuid(id)) return Promise.resolve(null);
     return this.prisma.encounter.findFirst({
       where: { id, tenantId },
-      select: { status: true, chiefComplaintText: true, complaintSource: true },
+      select: {
+        status: true,
+        chiefComplaintText: true,
+        complaintSource: true,
+        patientId: true,
+      },
     });
   }
 

@@ -8,7 +8,9 @@ import type { StaffPrincipal } from '../../common/auth/principal.js';
 import { Clock } from '../../common/clock/clock.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { PatientsService } from '../patients/patients.service.js';
 import { UsersService } from '../users/users.service.js';
+import type { CaptureForSuggestion } from './capture-for-suggestion.js';
 import type {
   ClinicalCaptureDto,
   CreateSymptomFindingsDto,
@@ -95,6 +97,7 @@ export class ClinicalCaptureService {
     private readonly events: EncounterEventsService,
     private readonly encounters: EncountersService,
     private readonly users: UsersService,
+    private readonly patients: PatientsService,
   ) {}
 
   /** POST /encounters/{id}/vital-signs (R1–R6, R11–R14, R16). */
@@ -231,6 +234,63 @@ export class ClinicalCaptureService {
     });
     const names = await this.users.findNames(tenantId, [principal.id]);
     return { items: rows.map((r) => toFindingDto(r, names)) };
+  }
+
+  /**
+   * Captura vigente para la sugerencia de triage de F-04 (D1 de specs/F-04-api/design.md), exportada para el módulo
+   * ai: estado, motivo original, la última toma (mayor recorded_at y después mayor id), todos los hallazgos en orden y
+   * los datos del paciente para la edad y el saneamiento. null si la atención no existe en el tenant (→ 404). Solo
+   * lectura; el resultado lleva datos personales y nunca se registra ni se serializa.
+   */
+  async getForSuggestion(
+    tenantId: string,
+    encounterId: string,
+  ): Promise<CaptureForSuggestion | null> {
+    const header = await this.encounters.findCaptureHeader(
+      tenantId,
+      encounterId,
+    );
+    if (!header) return null;
+    const where = { tenantId, encounterId };
+    const [latest, findings, patient] = await Promise.all([
+      this.prisma.vitalSign.findFirst({
+        where,
+        orderBy: [{ recordedAt: 'desc' }, { id: 'desc' }],
+        select: VITAL_SELECT,
+      }),
+      this.prisma.symptomFinding.findMany({
+        where,
+        orderBy: [{ recordedAt: 'asc' }, { id: 'asc' }],
+        select: { kind: true, description: true },
+      }),
+      this.patients.findById(tenantId, header.patientId),
+    ]);
+    return {
+      status: header.status,
+      chiefComplaintText: header.chiefComplaintText,
+      complaintSource: header.complaintSource,
+      latestVitalSigns: latest
+        ? {
+            respiratoryRate: latest.respiratoryRate,
+            oxygenSaturation: latest.oxygenSaturation,
+            supplementalOxygen: latest.supplementalOxygen,
+            systolicBp: latest.systolicBp,
+            diastolicBp: latest.diastolicBp,
+            heartRate: latest.heartRate,
+            consciousness: latest.consciousness,
+            temperatureC: latest.temperatureC?.toNumber() ?? null,
+            glucoseMgDl: latest.glucoseMgDl,
+          }
+        : null,
+      symptomFindings: findings,
+      patient: {
+        birthDate: patient?.birthDate ?? null,
+        estimatedAgeYears: patient?.estimatedAgeYears ?? null,
+        sex: patient?.sex ?? null,
+        fullName: patient?.fullName ?? null,
+        documentNumber: patient?.documentNumber ?? null,
+      },
+    };
   }
 
   /**

@@ -33,6 +33,8 @@
 - **Paso del humano (F-02-api):** aplicar en Supabase las migraciones `f02_patients_encounters` y `f02_app_role_grants` (y las de F-01 si faltan) con `npx prisma migrate deploy` usando su `DIRECT_URL`, solo el responsable de backend y avisando antes y después; después comprobar que `asclepio_app` no tiene `UPDATE`/`DELETE` en `encounter_events`.
 - **F-03-api:** las suites de F-03 (`test/f03-*.int-spec.ts`, `test/int/f03-fixtures.ts`) **no borran** tomas, hallazgos ni atenciones: `asclepio_app` solo tiene `SELECT` e `INSERT` sobre `vital_signs` y `symptom_findings`, y sus FKs son `RESTRICT`. Los estados que la API aún no alcanza (`REGISTERED`, `TRIAGED`, `IN_CARE`, `CLOSED`) se preparan como dueño de la base (`DIRECT_URL` local). Usan tenants `DEV-test-…-<sufijo>` propios por ejecución.
 - **Paso del humano (F-03-api):** aplicar en Supabase `f03_clinical_capture` y `f03_app_role_grants` con `DIRECT_URL="<URL directa de Supabase, puerto 5432>" npx prisma migrate deploy`, solo el responsable de backend y avisando antes y después; después comprobar con `SELECT table_name, privilege_type FROM information_schema.role_table_grants WHERE grantee = 'asclepio_app' AND table_schema = 'asclepio' AND table_name IN ('vital_signs', 'symptom_findings');` que solo hay `SELECT` e `INSERT`.
+- **F-04-api:** las suites de F-04 (`test/f04-*.int-spec.ts`) sustituyen `GROQ_CLIENT` y `OPENROUTER_CLIENT` por un `LlmClient` falso (`test/int/fake-llm.ts`): **ninguna prueba llama a Groq ni a OpenRouter** (R32). No borran sugerencias (`asclepio_app` solo tiene `SELECT` e `INSERT` sobre `triage_suggestions` y sus FKs son `RESTRICT`).
+- **Paso del humano (F-04-api):** aplicar en Supabase `f04_triage_suggestions` y `f04_app_role_grants` con `DIRECT_URL="<URL directa de Supabase, puerto 5432>" npx prisma migrate deploy`, solo el responsable de backend y avisando antes y después; después comprobar con `SELECT privilege_type FROM information_schema.role_table_grants WHERE grantee = 'asclepio_app' AND table_schema = 'asclepio' AND table_name = 'triage_suggestions';` que solo hay `SELECT` e `INSERT`. Añadir a `.env` `GROQ_MODEL`, `OPENROUTER_MODEL` (y opcionalmente `LLM_TIMEOUT_MS`, `LLM_TOTAL_BUDGET_MS`): sin ellas la API no arranca (R29).
 - `npm test` y `./init.sh` **no** necesitan base: las pruebas e2e (`test/*.e2e-spec.ts`) usan la app completa sin `DATABASE_URL` (Prisma conecta de forma perezosa).
 
 ## Alta de personal y sedes (scripts CLI, F-01-api)
@@ -51,11 +53,11 @@
 
 Se ejecuta **solo** cuando cambian el prompt (`ai/prompts/`, `prompt_version`) o el modelo (`GROQ_MODEL`/`OPENROUTER_MODEL`), y nunca dentro de `init.sh` ni de las pruebas.
 
-1. Comprueba que `.env` tiene las claves reales del LLM.
-2. Ejecuta `npm run ai:eval`. Recorre `ai/vignettes/*.json` y llama al LLM real.
-3. Revisa el resumen: porcentaje de acierto, porcentaje de subclasificación y guards aplicados.
+1. Comprueba que `.env` tiene las claves reales del LLM (`GROQ_API_KEY`, `GROQ_MODEL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`).
+2. Ejecuta `npm run ai:eval` (= `npm run -s build && node dist/scripts/ai-eval.js`). Recorre `ai/vignettes/*.json` y, por cada viñeta, ejecuta el mismo `TriageAdvisor` del endpoint (prompt → Groq → OpenRouter → validador → SafetyGuards) contra el LLM real, sin base de datos.
+3. Revisa la salida: por viñeta, el nivel obtenido (tras los guards), si acertó (`nivel ∈ acceptable_levels`), si subclasificó (`nivel > max(acceptable_levels)`), si hubo guard, el proveedor, el modelo, `prompt_version`, la latencia y si está revisada; al final, el porcentaje de acierto y de subclasificación.
 4. Guarda el resultado en `progress/impl_<id>.md` junto con `prompt_version` y el modelo.
-5. Un cambio que aumente la subclasificación no se acepta. El umbral exacto está en PA-F04-6.
+5. Umbral (PA-F04-6): un cambio de prompt o modelo solo se acepta si **ninguna viñeta revisada de nivel I o II queda subclasificada o sin nivel**; si ocurre, el comando sale con código ≠ 0. Mientras ninguna viñeta esté revisada (`reviewed_by: null`), el umbral no es vinculante y el comando lo avisa.
 
 ## Demo extremo a extremo (comprobación manual)
 

@@ -4,6 +4,7 @@ import { ConfigModule } from './common/config/config.module.js';
 import { HealthController } from './common/health/health.controller.js';
 import { PrismaModule } from './common/prisma/prisma.module.js';
 import { ThrottleModule } from './common/throttle/throttle.module.js';
+import { AiModule } from './modules/ai/ai.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { EncountersModule } from './modules/encounters/encounters.module.js';
@@ -24,6 +25,7 @@ import { UsersModule } from './modules/users/users.module.js';
     PatientsHttpModule,
     AuthModule,
     EncountersModule,
+    AiModule,
   ],
   controllers: [HealthController],
 })

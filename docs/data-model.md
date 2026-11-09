@@ -83,20 +83,24 @@ erDiagram
   }
   triage_suggestions {
     uuid id PK
+    uuid tenant_id FK
     uuid encounter_id FK
+    uuid requested_by FK
     jsonb input_snapshot "sin nombre ni documento"
-    smallint suggested_level
-    jsonb explanation
-    text provider
+    enum status "OK|INVALID_OUTPUT|TIMEOUT|FAILED"
+    smallint llm_level
+    smallint suggested_level "<= llm_level"
+    jsonb explanation "summary + factors"
+    bool guard_applied
+    jsonb guard_reasons
+    enum provider "GROQ|OPENROUTER"
     text model
     text prompt_version
-    jsonb raw_response
+    text raw_response
     int tokens_in
     int tokens_out
     int latency_ms
-    bool guard_applied
-    jsonb guard_reasons
-    enum status "OK|INVALID_OUTPUT|TIMEOUT|FAILED"
+    jsonb attempts
     timestamptz created_at
   }
   triage_decisions {
@@ -211,7 +215,18 @@ Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 - CHECK técnicos (bloque manual de `f03_clinical_capture`): `vital_signs_at_least_one_sign` (`num_nonnulls(<signos>) >= 1`) y `symptom_findings_description_length` (`char_length(btrim(description))` entre 1 y 500; la API guarda la descripción sin espacios extremos). Índices `(encounter_id, recorded_at, id)` y `(tenant_id, recorded_at)` en ambas tablas. Ids `uuid` (sin secuencias).
 - La captura bloquea la atención con un UPDATE de `encounters.updated_at` (hora del servidor) en la misma transacción que su `encounter_event`; el estado no cambia.
 
+### F-04-api (migraciones `f04_triage_suggestions` y `f04_app_role_grants`; PA-F04-1..7 resueltas el 2026-11-09)
+
+- **Dueño:** `ai`. **Una fila por solicitud** de sugerencia (D2 de specs/F-04-api/design.md): las llamadas a cada proveedor quedan en `attempts jsonb` (`[{ provider, model, outcome, latencyMs, httpStatus }]`, `outcome` ∈ `OK`, `INVALID_OUTPUT`, `TIMEOUT`, `NETWORK`, `HTTP`, `EMPTY`, `BUDGET_EXHAUSTED`).
+- `triage_suggestions`: `tenant_id`, `encounter_id`, `requested_by` (→ `users`), `input_snapshot jsonb` (instantánea D7: edad, sexo, motivo y hallazgos **saneados**, `complaint_source` y la toma vigente; sin nombre, documento, ids, fecha de nacimiento ni horas), `status` (enum `triage_suggestion_status`), `llm_level` y `suggested_level` (`smallint`, 1–5), `explanation jsonb` (`{ summary, factors }`), `guard_applied`, `guard_reasons jsonb` (`[{ rule, maxLevel, trigger: { news2Total, field?, points? } }]`), `provider` (enum `llm_provider`: `GROQ`, `OPENROUTER`), `model`, `prompt_version`, `raw_response text`, `tokens_in`, `tokens_out`, `latency_ms`, `attempts jsonb` y `created_at` (hora del servidor, sin default).
+- **Diferencias con el diagrama inicial:** se añaden `tenant_id`, `requested_by`, `llm_level` y `attempts`; `raw_response` pasa de `jsonb` a **`text`** (una salida `INVALID_OUTPUT` puede no ser JSON y se guarda tal cual); `provider` pasa a enum.
+- CHECK (bloque manual de `f04_triage_suggestions`): `triage_suggestions_status_levels` (`status = 'OK'` ⇔ `llm_level`, `suggested_level` y `explanation` no nulos), rangos 1–5 de ambos niveles, **`triage_suggestions_guard_never_lowers` (`suggested_level <= llm_level`, ADR 0005)**, `triage_suggestions_guard_applied` (con `status = 'OK'`, `guard_applied = (suggested_level < llm_level)`) y `latency_ms >= 0`.
+- FKs `(encounter_id, tenant_id) → encounters`, `tenant_id → tenants` y `requested_by → users`, todas `ON DELETE RESTRICT ON UPDATE RESTRICT`. Índice `(encounter_id, created_at DESC, id DESC)` (la vigente es la primera).
+- Permisos: `asclepio_app` solo `SELECT` e `INSERT` (append-only). La sugerencia **nunca** modifica `encounters` ni crea `triage_decisions`; su auditoría (`TRIAGE_SUGGESTION_CREATED`, metadata `{ encounterId, status, guardApplied }`) va en la misma transacción. Sin `encounter_event` (D13).
+- `raw_response` puede contener texto clínico ya saneado: nunca se expone por la API ni se registra en logs (igual que `input_snapshot` y `attempts`).
+
 ### Pendiente (preguntas abiertas)
 
 - Validación clínica de la lista de signos y de los rangos provisionales de F-03 por un asesor clínico.
+- Validación clínica de la tabla NEWS2 y de las reglas G1–G3 de F-04 (PROVISIONALES) y revisión de las 20 viñetas en borrador.
 - `complaint_source`: el prompt fija `VOICE_ON_DEVICE`; `TYPED` es el valor propuesto para el texto escrito.

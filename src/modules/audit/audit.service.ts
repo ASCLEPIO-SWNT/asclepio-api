@@ -24,7 +24,9 @@ export type AuditAction =
   | 'ENCOUNTER_STATUS_CHANGED'
   // F-03-api
   | 'VITAL_SIGNS_RECORDED'
-  | 'SYMPTOM_FINDINGS_RECORDED';
+  | 'SYMPTOM_FINDINGS_RECORDED'
+  // F-04-api
+  | 'TRIAGE_SUGGESTION_CREATED';
 
 export type AuditJson =
   string | number | boolean | null | AuditJson[] | { [key: string]: AuditJson };
@@ -82,6 +84,17 @@ const FORBIDDEN_KEYS = new Set([
   'values',
   'vitalsigns',
   'findings',
+  // F-04-api (R25, R27): la sugerencia se audita solo con encounterId, status y guardApplied; nunca la instantánea,
+  // la respuesta cruda, el prompt, los niveles, la explicación ni los factores.
+  'inputsnapshot',
+  'rawresponse',
+  'snapshot',
+  'level',
+  'llmlevel',
+  'suggestedlevel',
+  'explanation',
+  'factors',
+  'prompt',
 ]);
 
 /** Lanza si la metadata contiene (a cualquier profundidad) una clave con datos personales o secretos. */

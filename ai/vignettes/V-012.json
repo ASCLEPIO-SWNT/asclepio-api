@@ -1,0 +1,34 @@
+{
+  "id": "V-012",
+  "title": "Hiperglucemia sin compromiso del estado general",
+  "input": {
+    "age_years": 62,
+    "sex": "F",
+    "chief_complaint_text": "glucometría alta en la casa y mucha sed",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 18,
+      "spo2": 97,
+      "supplemental_oxygen": false,
+      "systolic_bp": 140,
+      "diastolic_bp": 88,
+      "heart_rate": 96,
+      "consciousness": "A",
+      "temperature_c": 36.9,
+      "glucose_mg_dl": 380
+    },
+    "symptom_findings": []
+  },
+  "expected": {
+    "level": 3,
+    "acceptable_levels": [
+      2,
+      3
+    ],
+    "must_mention_factors": [
+      "vital_signs.glucose_mg_dl"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

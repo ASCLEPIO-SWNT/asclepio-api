@@ -1,0 +1,39 @@
+{
+  "id": "V-015",
+  "title": "Herida pequeña en un dedo sin sangrado activo",
+  "input": {
+    "age_years": 45,
+    "sex": "M",
+    "chief_complaint_text": "herida pequeña en el dedo con un cuchillo de cocina, ya no sangra",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 16,
+      "spo2": 98,
+      "supplemental_oxygen": false,
+      "systolic_bp": 120,
+      "diastolic_bp": 78,
+      "heart_rate": 76,
+      "consciousness": "A",
+      "temperature_c": 36.8,
+      "glucose_mg_dl": null
+    },
+    "symptom_findings": [
+      {
+        "kind": "FINDING",
+        "description": "herida de 1 cm, bordes limpios"
+      }
+    ]
+  },
+  "expected": {
+    "level": 4,
+    "acceptable_levels": [
+      3,
+      4
+    ],
+    "must_mention_factors": [
+      "chief_complaint_text"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

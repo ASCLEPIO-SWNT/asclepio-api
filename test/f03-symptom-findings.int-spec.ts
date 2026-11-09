@@ -147,12 +147,13 @@ describe('F-03: síntomas, hallazgos y notas del motivo (integración)', () => {
       .http('patch', `/encounters/${id}`, nurse.token)
       .send({ chiefComplaintText: 'x' })
       .expect(404);
-    // El service de captura solo inserta y lee.
+    // El service de captura solo inserta y lee (getForSuggestion: lectura para F-04, D1 de specs/F-04-api).
     expect(
       Object.getOwnPropertyNames(ClinicalCaptureService.prototype).sort(),
     ).toEqual([
       'constructor',
       'getCapture',
+      'getForSuggestion',
       'recordSymptomFindings',
       'recordVitalSigns',
     ]);

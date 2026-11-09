@@ -1,0 +1,43 @@
+{
+  "id": "V-002",
+  "title": "Reacción alérgica grave con dificultad respiratoria",
+  "input": {
+    "age_years": 24,
+    "sex": "F",
+    "chief_complaint_text": "picadura de abeja hace 10 minutos, dificultad para respirar y labios hinchados",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 32,
+      "spo2": 86,
+      "supplemental_oxygen": false,
+      "systolic_bp": 78,
+      "diastolic_bp": 45,
+      "heart_rate": 136,
+      "consciousness": "V",
+      "temperature_c": 36.8,
+      "glucose_mg_dl": null
+    },
+    "symptom_findings": [
+      {
+        "kind": "FINDING",
+        "description": "estridor audible"
+      },
+      {
+        "kind": "FINDING",
+        "description": "urticaria generalizada"
+      }
+    ]
+  },
+  "expected": {
+    "level": 1,
+    "acceptable_levels": [
+      1
+    ],
+    "must_mention_factors": [
+      "chief_complaint_text",
+      "vital_signs.spo2"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

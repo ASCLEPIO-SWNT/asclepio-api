@@ -1,0 +1,39 @@
+{
+  "id": "V-001",
+  "title": "Paciente inconsciente con bradicardia e hipotensión",
+  "input": {
+    "age_years": 67,
+    "sex": "M",
+    "chief_complaint_text": "lo encontraron inconsciente en la sala de espera, no responde al llamado",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 6,
+      "spo2": 82,
+      "supplemental_oxygen": false,
+      "systolic_bp": 70,
+      "diastolic_bp": 40,
+      "heart_rate": 38,
+      "consciousness": "U",
+      "temperature_c": 36.0,
+      "glucose_mg_dl": null
+    },
+    "symptom_findings": [
+      {
+        "kind": "FINDING",
+        "description": "no responde al dolor, respiración superficial"
+      }
+    ]
+  },
+  "expected": {
+    "level": 1,
+    "acceptable_levels": [
+      1
+    ],
+    "must_mention_factors": [
+      "vital_signs.consciousness",
+      "vital_signs.respiratory_rate"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

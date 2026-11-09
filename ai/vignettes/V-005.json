@@ -1,0 +1,40 @@
+{
+  "id": "V-005",
+  "title": "Dolor torácico con taquicardia (caso 7:42 p. m.)",
+  "input": {
+    "age_years": 58,
+    "sex": "M",
+    "chief_complaint_text": "dolor torácico opresivo de 40 minutos de evolución",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 20,
+      "spo2": 94,
+      "supplemental_oxygen": false,
+      "systolic_bp": 150,
+      "diastolic_bp": 95,
+      "heart_rate": 112,
+      "consciousness": "A",
+      "temperature_c": 36.9,
+      "glucose_mg_dl": null
+    },
+    "symptom_findings": [
+      {
+        "kind": "FINDING",
+        "description": "diaforesis"
+      }
+    ]
+  },
+  "expected": {
+    "level": 2,
+    "acceptable_levels": [
+      1,
+      2
+    ],
+    "must_mention_factors": [
+      "chief_complaint_text",
+      "vital_signs.heart_rate"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

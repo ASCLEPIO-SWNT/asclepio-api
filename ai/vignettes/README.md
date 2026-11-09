@@ -2,7 +2,7 @@
 
 Casos **sintéticos** con el nivel esperado, que se usan para evaluar el prompt y el modelo del módulo `ai` con `npm run ai:eval` (ver `docs/verification.md`).
 
-> Todavía no hay casos. Los casos y el umbral de aceptación dependen de PA-F04-6 y requieren revisión clínica.
+> Hay 20 viñetas (`V-001`…`V-020`, 4 por nivel I–V) en **borrador** (`"source": "BORRADOR — revisar con asesor clínico"`, `reviewed_by: null`), redactadas en F-04-api (PA-F04-6). Mientras ninguna esté revisada, el umbral de `ai:eval` no es vinculante.
 
 ## Reglas
 - Solo datos **sintéticos**: sin nombres ni documentos, ni siquiera ficticios (el payload al LLM nunca los lleva).
@@ -33,7 +33,8 @@ Casos **sintéticos** con el nivel esperado, que se usan para evaluar el prompt 
 }
 ```
 
-- `input` usa **los mismos nombres de campo que el `input_snapshot`** del módulo `ai`. Si la spec de F-04 los cambia, este formato se actualiza.
+- `input` usa **los mismos nombres de campo que el `input_snapshot`** del módulo `ai` (D7 de specs/F-04-api/design.md): `age_years`, `sex` (`M`/`F`/`X`), `chief_complaint_text`, `complaint_source` (`TYPED`/`VOICE_ON_DEVICE`), `vital_signs` (`respiratory_rate`, `spo2`, `supplemental_oxygen`, `systolic_bp`, `diastolic_bp`, `heart_rate`, `consciousness` ACVPU, `temperature_c`, `glucose_mg_dl`) y `symptom_findings` (`[{ kind, description }]`). Lo que falte se completa con `null` (`complaint_source` con `TYPED` y `symptom_findings` con `[]`); un signo NEWS2 ausente no puntúa en los SafetyGuards.
+- `expected.level` es el nivel esperado (1 = I). El umbral de PA-F04-6 mira solo las viñetas **revisadas** de nivel 1–2.
 - `acceptable_levels` permite la sobreclasificación tolerable; la subclasificación cuenta siempre como fallo.
 - `must_mention_factors` son los campos de entrada que la explicación debe citar.
 

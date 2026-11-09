@@ -111,6 +111,62 @@ describe('AuditService', () => {
     ).not.toThrow();
   });
 
+  it('R27: rechaza en metadata la instantánea, la respuesta cruda, el prompt, los niveles, la explicación y los factores de una sugerencia (F-04)', () => {
+    for (const key of [
+      'inputSnapshot',
+      'input_snapshot',
+      'snapshot',
+      'rawResponse',
+      'raw_response',
+      'prompt',
+      'level',
+      'llmLevel',
+      'llm_level',
+      'suggestedLevel',
+      'suggested_level',
+      'explanation',
+      'factors',
+    ]) {
+      expect(() => assertSafeMetadata({ [key]: 1 })).toThrow(/metadata/);
+      expect(() => assertSafeMetadata({ nested: [{ [key]: 1 }] })).toThrow(
+        /metadata/,
+      );
+    }
+  });
+
+  it('R25: admite la metadata de TRIAGE_SUGGESTION_CREATED: encounterId, status y guardApplied', async () => {
+    const metadata = {
+      encounterId: '6f1c1d2e-0000-4000-8000-000000000002',
+      status: 'OK',
+      guardApplied: true,
+    };
+    expect(() => assertSafeMetadata(metadata)).not.toThrow();
+    const { svc, calls } = setup();
+    await svc.record({
+      action: 'TRIAGE_SUGGESTION_CREATED',
+      actorType: 'STAFF',
+      actorId: 'a',
+      tenantId: 't',
+      entity: 'triage_suggestions',
+      entityId: 's',
+      metadata,
+    });
+    expect(calls).toEqual([
+      {
+        data: {
+          action: 'TRIAGE_SUGGESTION_CREATED',
+          actorType: 'STAFF',
+          actorId: 'a',
+          tenantId: 't',
+          entity: 'triage_suggestions',
+          entityId: 's',
+          metadata,
+          occurredAt: NOW,
+        },
+      },
+    ]);
+  });
+
   it('R32: record no inserta nada si la metadata trae datos personales', async () => {
     const { svc, calls } = setup();
     await expect(

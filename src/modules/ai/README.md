@@ -1,1 +1,1 @@
-Sugerencia LLM (LlmClient, Groq/OpenRouter, PromptBuilder, Validator, SafetyGuards, TriageAdvisor); tabla triage_suggestions. Llega con F-04-api.
+Sugerencia de triage por LLM (F-04-api): `LlmClient` (`OpenAiCompatibleAdapter` para Groq y OpenRouter), `TriagePromptBuilder` (`ai/prompts/`), `TriageResponseValidator`, NEWS2 y `SafetyGuards` (PROVISIONALES), `TriageAdvisor` y `TriageSuggestionsService`; tabla `triage_suggestions` (solo inserciones). Ver docs/architecture.md, sección "Sugerencia de triage (F-04)".

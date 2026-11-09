@@ -1,0 +1,39 @@
+{
+  "id": "V-003",
+  "title": "Trauma con sangrado abundante y taquicardia",
+  "input": {
+    "age_years": 31,
+    "sex": "M",
+    "chief_complaint_text": "accidente de moto, herida abierta en el muslo con sangrado abundante",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 30,
+      "spo2": 93,
+      "supplemental_oxygen": false,
+      "systolic_bp": 72,
+      "diastolic_bp": 40,
+      "heart_rate": 142,
+      "consciousness": "V",
+      "temperature_c": 35.8,
+      "glucose_mg_dl": null
+    },
+    "symptom_findings": [
+      {
+        "kind": "FINDING",
+        "description": "palidez y piel fría"
+      }
+    ]
+  },
+  "expected": {
+    "level": 1,
+    "acceptable_levels": [
+      1
+    ],
+    "must_mention_factors": [
+      "vital_signs.systolic_bp",
+      "vital_signs.heart_rate"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

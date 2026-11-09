@@ -1,0 +1,35 @@
+{
+  "id": "V-007",
+  "title": "Fiebre con confusión en adulto mayor",
+  "input": {
+    "age_years": 80,
+    "sex": "M",
+    "chief_complaint_text": "fiebre y confusión desde ayer",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 24,
+      "spo2": 93,
+      "supplemental_oxygen": false,
+      "systolic_bp": 96,
+      "diastolic_bp": 58,
+      "heart_rate": 118,
+      "consciousness": "C",
+      "temperature_c": 39.2,
+      "glucose_mg_dl": null
+    },
+    "symptom_findings": []
+  },
+  "expected": {
+    "level": 2,
+    "acceptable_levels": [
+      1,
+      2
+    ],
+    "must_mention_factors": [
+      "vital_signs.consciousness",
+      "vital_signs.temperature_c"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

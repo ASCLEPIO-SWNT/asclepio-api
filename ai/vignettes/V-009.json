@@ -1,0 +1,35 @@
+{
+  "id": "V-009",
+  "title": "Tos productiva y fiebre de tres días",
+  "input": {
+    "age_years": 50,
+    "sex": "M",
+    "chief_complaint_text": "tos con expectoración y fiebre de 3 días",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 21,
+      "spo2": 95,
+      "supplemental_oxygen": false,
+      "systolic_bp": 128,
+      "diastolic_bp": 82,
+      "heart_rate": 98,
+      "consciousness": "A",
+      "temperature_c": 38.6,
+      "glucose_mg_dl": null
+    },
+    "symptom_findings": []
+  },
+  "expected": {
+    "level": 3,
+    "acceptable_levels": [
+      2,
+      3
+    ],
+    "must_mention_factors": [
+      "chief_complaint_text",
+      "vital_signs.temperature_c"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

@@ -1,0 +1,34 @@
+{
+  "id": "V-004",
+  "title": "Convulsión prolongada sin recuperar la conciencia",
+  "input": {
+    "age_years": 45,
+    "sex": "F",
+    "chief_complaint_text": "convulsiona desde hace 15 minutos sin recuperar la conciencia",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 28,
+      "spo2": 88,
+      "supplemental_oxygen": false,
+      "systolic_bp": 165,
+      "diastolic_bp": 95,
+      "heart_rate": 128,
+      "consciousness": "U",
+      "temperature_c": 38.3,
+      "glucose_mg_dl": 110
+    },
+    "symptom_findings": []
+  },
+  "expected": {
+    "level": 1,
+    "acceptable_levels": [
+      1
+    ],
+    "must_mention_factors": [
+      "chief_complaint_text",
+      "vital_signs.consciousness"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}

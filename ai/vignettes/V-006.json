@@ -1,0 +1,39 @@
+{
+  "id": "V-006",
+  "title": "Debilidad de un brazo y dificultad para hablar de inicio reciente",
+  "input": {
+    "age_years": 72,
+    "sex": "F",
+    "chief_complaint_text": "desde hace una hora no mueve el brazo derecho y habla enredado",
+    "complaint_source": "TYPED",
+    "vital_signs": {
+      "respiratory_rate": 18,
+      "spo2": 96,
+      "supplemental_oxygen": false,
+      "systolic_bp": 188,
+      "diastolic_bp": 102,
+      "heart_rate": 88,
+      "consciousness": "A",
+      "temperature_c": 36.7,
+      "glucose_mg_dl": 128
+    },
+    "symptom_findings": [
+      {
+        "kind": "FINDING",
+        "description": "desviación de la comisura labial"
+      }
+    ]
+  },
+  "expected": {
+    "level": 2,
+    "acceptable_levels": [
+      1,
+      2
+    ],
+    "must_mention_factors": [
+      "chief_complaint_text"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico",
+  "reviewed_by": null
+}
