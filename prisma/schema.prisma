@@ -53,16 +53,17 @@ model Tenant {
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  sites            Site[]
-  users            User[]
-  patients         Patient[]
-  patientAccounts  PatientAccount[]
-  auditLogs        AuditLog[]
-  encounters       Encounter[]
-  preRegistrations PreRegistration[]
-  encounterEvents  EncounterEvent[]
-  vitalSigns       VitalSign[]
-  symptomFindings  SymptomFinding[]
+  sites             Site[]
+  users             User[]
+  patients          Patient[]
+  patientAccounts   PatientAccount[]
+  auditLogs         AuditLog[]
+  encounters        Encounter[]
+  preRegistrations  PreRegistration[]
+  encounterEvents   EncounterEvent[]
+  vitalSigns        VitalSign[]
+  symptomFindings   SymptomFinding[]
+  triageSuggestions TriageSuggestion[]
 
   @@map("tenants")
   @@schema("asclepio")
@@ -99,11 +100,12 @@ model User {
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant                   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  registeredEncounters     Encounter[]
-  resolvedPreRegistrations PreRegistration[]
-  recordedVitalSigns       VitalSign[]
-  recordedSymptomFindings  SymptomFinding[]
+  tenant                     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  registeredEncounters       Encounter[]
+  resolvedPreRegistrations   PreRegistration[]
+  recordedVitalSigns         VitalSign[]
+  recordedSymptomFindings    SymptomFinding[]
+  requestedTriageSuggestions TriageSuggestion[]
 
   @@index([tenantId])
   @@map("users")
@@ -243,14 +245,15 @@ model Encounter {
 
   // F-02 corrección 1: todas RESTRICT. ON UPDATE CASCADE (valor por defecto de Prisma) reescribiría la atención sin evento
   // ni auditoría al cambiar el id referenciado (las acciones referenciales se ejecutan como dueño y saltan los grants).
-  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  site             Site              @relation(fields: [siteId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
-  patient          Patient           @relation(fields: [patientId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
-  registeredByUser User              @relation(fields: [registeredBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  preRegistrations PreRegistration[] // como mucho uno: pre_registrations.encounter_id es único
-  events           EncounterEvent[]
-  vitalSigns       VitalSign[]
-  symptomFindings  SymptomFinding[]
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  site              Site               @relation(fields: [siteId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+  patient           Patient            @relation(fields: [patientId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+  registeredByUser  User               @relation(fields: [registeredBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  preRegistrations  PreRegistration[] // como mucho uno: pre_registrations.encounter_id es único
+  events            EncounterEvent[]
+  vitalSigns        VitalSign[]
+  symptomFindings   SymptomFinding[]
+  triageSuggestions TriageSuggestion[]
 
   @@unique([id, tenantId])
   @@unique([patientId], map: "encounters_one_active_per_patient", where: raw("status <> ALL (ARRAY['CLOSED'::asclepio.encounter_status, 'CANCELLED'::asclepio.encounter_status])"))
@@ -395,5 +398,68 @@ model SymptomFinding {
   @@index([encounterId, recordedAt, id])
   @@index([tenantId, recordedAt])
   @@map("symptom_findings")
+  @@schema("asclepio")
+}
+
+// ---------------------------------------------------------------- F-04: sugerencia de triage por LLM
+
+/// Resultado de una solicitud de sugerencia (F-04-api): OK, salida del LLM inválida, timeout o fallo del proveedor.
+enum TriageSuggestionStatus {
+  OK
+  INVALID_OUTPUT
+  TIMEOUT
+  FAILED
+
+  @@map("triage_suggestion_status")
+  @@schema("asclepio")
+}
+
+/// Proveedor LLM que respondió (o el último intentado) en una solicitud de sugerencia.
+enum LlmProvider {
+  GROQ
+  OPENROUTER
+
+  @@map("llm_provider")
+  @@schema("asclepio")
+}
+
+/// Sugerencia de triage: una fila por solicitud (D2 de F-04-api), solo inserciones (asclepio_app: SELECT e INSERT).
+/// Dueño: ai. Es una propuesta, nunca una decisión: no modifica encounters (R23).
+/// CHECK manuales (migración f04_triage_suggestions): coherencia de status con los niveles, rangos 1–5,
+/// suggested_level <= llm_level (los guards solo suben la gravedad, R19), guard_applied y latency_ms >= 0.
+model TriageSuggestion {
+  id             String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String                 @map("tenant_id") @db.Uuid
+  encounterId    String                 @map("encounter_id") @db.Uuid
+  requestedBy    String                 @map("requested_by") @db.Uuid
+  /// Instantánea enviada al LLM (D7): sin nombre, documento, ids ni horas (RNF-04).
+  inputSnapshot  Json                   @map("input_snapshot")
+  status         TriageSuggestionStatus
+  llmLevel       Int?                   @map("llm_level") @db.SmallInt
+  suggestedLevel Int?                   @map("suggested_level") @db.SmallInt
+  /// { summary, factors } (D9).
+  explanation    Json?
+  guardApplied   Boolean                @default(false) @map("guard_applied")
+  guardReasons   Json                   @default("[]") @map("guard_reasons")
+  provider       LlmProvider?
+  model          String?
+  promptVersion  String                 @map("prompt_version")
+  /// Respuesta cruda del proveedor (texto: una salida inválida puede no ser JSON). Nunca se expone ni se registra.
+  rawResponse    String?                @map("raw_response")
+  tokensIn       Int?                   @map("tokens_in")
+  tokensOut      Int?                   @map("tokens_out")
+  latencyMs      Int                    @map("latency_ms")
+  /// Una entrada por llamada a proveedor (D2): { provider, model, outcome, latencyMs, httpStatus }.
+  attempts       Json
+  /// Hora del servidor (Clock); sin default.
+  createdAt      DateTime               @map("created_at") @db.Timestamptz(6)
+
+  // Todas RESTRICT (las acciones referenciales se ejecutan como dueño y saltarían los grants append-only).
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  encounter       Encounter @relation(fields: [encounterId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Restrict)
+  requestedByUser User      @relation(fields: [requestedBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([encounterId, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("triage_suggestions")
   @@schema("asclepio")
 }
