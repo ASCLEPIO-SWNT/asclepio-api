@@ -110,7 +110,7 @@
       ],
       "contract": {
         "changes": true,
-        "version": null
+        "version": "0.5.0"
       },
       "touches_db": true,
       "acceptance": [
@@ -118,7 +118,7 @@
         "Detalle en specs/F-04-api/requirements.md"
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "F-05-api",

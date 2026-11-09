@@ -46,6 +46,7 @@ Regla entre repos: **primero el contrato**. `F-0X-web` y `F-0X-mobile` no pasan 
 | F-02-api | done (2026-10-27) | 0.3.0 |
 | F-01-mobile | done (2026-10-27) | consume 0.2.1 |
 | F-03-api | done (2026-10-27) | 0.4.0 |
+| F-04-api | done (2026-11-09) | 0.5.0 |
 | Todos los demás | pending | — |
 
 ## Trazabilidad F-0X.ACn → R<n>
@@ -65,6 +66,14 @@ Cada spec (`specs/<id>/requirements.md`) traza sus `R<n>` a los criterios global
 | F-03.AC2 | F-03-api | R3–R6, R22 | ídem |
 | F-03.AC3 | F-03-api | R7–R12, R19–R21 | ídem |
 | F-03.AC4 | F-03-api | R14–R18 | ídem |
+| F-04.AC1 | F-04-api | R1–R5, R7, R16, R22, R28 | `R<n>:` en `src/modules/ai/*.spec.ts`, `test/f04-*` y `test/int/*.int-spec.ts` |
+| F-04.AC2 | F-04-api | R8–R10, R27 | ídem |
+| F-04.AC3 | F-04-api | R15, R16, R22 | ídem |
+| F-04.AC4 | F-04-api | R1, R11–R14, R22, R29 | ídem |
+| F-04.AC5 | F-04-api | R17–R19 | ídem |
+| F-04.AC6 | F-04-api | R6, R20, R21, R24–R26 | ídem |
+| F-04.AC7 | F-04-api | R23, R24 | ídem |
+| F-04.AC9 | F-04-api | R30–R32 | ídem |
 
 ## Preguntas abiertas (consolidado)
 
@@ -77,8 +86,7 @@ No se implementa nada que dependa de estas preguntas hasta que se respondan. El 
 | ~~PA-PAC-1..6~~ | Resueltas el 2026-10-26 (ADR 0008): documento + contraseña; sede de una lista; expira a las 6 h; el paciente solo ve el estado (no el nivel); casilla de consentimiento Ley 1581 con `consent_at` y versión; sin cuentas de menores | — |
 | ~~PA-F02-1..9~~ | Resueltas el 2026-10-26 (propuestas de la spec de F-02-api aceptadas: datos mínimos y NN, paso automático a WAITING_TRIAGE, cancelación por RECEPTION/NURSE con motivo, IN_CARE/CLOSED por PHYSICIAN en F-06, edición limitada del perfil, un pendiente y una atención activa, rechazo por recepción, filtro por sede, estado sin nivel) | — |
 | ~~PA-F03-1..4~~ | Resueltas el 2026-10-27 (spec de F-03-api): signos del NEWS2 y rangos amplios de plausibilidad, **PROVISIONALES, no validados clínicamente — revisar con asesor clínico**; hallazgos en texto libre estructurado; el motivo no se edita (notas `COMPLAINT_NOTE`) | — |
-| PA-F04-1 | **Reglas y umbrales de los SafetyGuards** (asesor clínico) | F-04 |
-| PA-F04-2..7 | Modelo y versión, timeout, disparo de la sugerencia, re-sugerencia, viñetas, saneamiento del texto | F-04 |
+| ~~PA-F04-1..7~~ | Resueltas el 2026-11-09 (spec de F-04-api): SafetyGuards sobre NEWS2 RCP 2017 con G1 (≥ 7 → máx. II), G2 (5–6 → máx. III) y G3 (parámetro = 3 → máx. III), **PROVISIONALES, no validados clínicamente — revisar con asesor clínico**; `openai/gpt-oss-120b` en Groq y OpenRouter; 8 s por llamada, 1 reintento (OpenRouter) y 20 s en total; botón explícito; re-sugerencia en `WAITING_TRIAGE` (se muestra la más reciente); 20 viñetas en borrador sin subclasificar I–II; saneamiento de nombre y documento | — |
 | PA-F05-1..3 | Re-triage, catálogo de motivos, VALIDATE con guard | F-05 |
 | PA-F06-1..5 | **Tiempos máximos de I, III, IV y V**, definición de espera, refresco, alcance por sede | F-06 |
 | PA-F07-1..4 | **Formato oficial Res. 373 / SISPRO**, tipo de kappa, métricas, documento en el CSV | F-07 |
