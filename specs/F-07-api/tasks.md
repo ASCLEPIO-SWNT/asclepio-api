@@ -28,7 +28,7 @@
   - `R9:` conteos por acción, estado, proveedor y guard (todas las sugerencias de la población).
 
   (R6, R7, R8, R9)
-- [ ] T4 Prueba unitaria + `report-csv.ts` (pura):
+- [x] T4 Prueba unitaria + `report-csv.ts` (pura):
   - `R11:` cabecera exacta, CRLF y orden de filas.
   - `R12:` columnas de D6 en orden, horas con `-05:00`, minutos con punto y 1 decimal, vacíos.
   - `R14:` `site_name` con `=`, `+`, `-`, `@`, tabulador y CR, y con coma o comillas (RFC 4180).
