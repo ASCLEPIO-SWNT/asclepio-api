@@ -24,3 +24,15 @@ export function isAdult(birthDate: string, today: string): boolean {
   const adultOn = `${pad(y, 4)}-${pad(m)}-${pad(d)}`;
   return today >= adultOn;
 }
+
+/**
+ * Edad cumplida en años entre `birthDate` y `today` (fechas civiles YYYY-MM-DD; `today` en America/Bogota). Movida
+ * desde modules/ai/triage-input.ts (D4 de specs/F-06-api/design.md): una sola regla de edad para F-04 y F-06.
+ */
+export function ageInYears(birthDate: string, today: string): number {
+  const [by, bm, bd] = birthDate.split('-').map(Number);
+  const [ty, tm, td] = today.split('-').map(Number);
+  // Quien nació un 29 de febrero cumple el 1 de marzo en años no bisiestos (como isAdult).
+  const beforeBirthday = tm < bm || (tm === bm && td < bd);
+  return ty - by - (beforeBirthday ? 1 : 0);
+}

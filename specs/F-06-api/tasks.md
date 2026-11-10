@@ -6,7 +6,7 @@
 >
 > Nada se ejecuta contra Supabase.
 
-- [ ] T1 Refactor sin cambio de comportamiento: mover `ageInYears` de `modules/ai/triage-input.ts` a `common/clock/age.ts`, con sus pruebas, y hacer que `triage-input.ts` la importe. `npm test` sigue en verde, sin tocar las pruebas de F-04. (R2)
+- [x] T1 Refactor sin cambio de comportamiento: mover `ageInYears` de `modules/ai/triage-input.ts` a `common/clock/age.ts`, con sus pruebas, y hacer que `triage-input.ts` la importe. `npm test` sigue en verde, sin tocar las pruebas de F-04. (R2)
 - [ ] T2 Prueba unitaria + `modules/queue/queue.rules.ts` (pura):
   - `MAX_WAIT_MINUTES_BY_LEVEL` con el comentario "Res. 5596 de 2015: I inmediato, II 30 min; III–V sin tiempo máximo en el MVP (PA-F06-1, opción (a), humano, 2026-11-09)".
   - `R3:` `waitMinutes` (59 s → 0, 60 s → 1).
