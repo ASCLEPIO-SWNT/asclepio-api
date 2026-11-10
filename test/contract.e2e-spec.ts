@@ -5,7 +5,7 @@ import { buildOpenApiDocument } from '../src/app.setup.js';
 import { VITAL_SIGN_DEFINITIONS } from '../src/modules/encounters/vital-signs.rules.js';
 import { createApp } from './e2e-app.js';
 
-describe('Contrato OpenAPI 0.6.x (e2e, sin base)', () => {
+describe('Contrato OpenAPI 0.7.x (e2e, sin base)', () => {
   let app: INestApplication<App>;
   beforeAll(async () => {
     app = await createApp();
@@ -22,6 +22,8 @@ describe('Contrato OpenAPI 0.6.x (e2e, sin base)', () => {
       '/api/v1/encounters/{id}',
       '/api/v1/encounters/{id}/cancel',
       '/api/v1/encounters/{id}/clinical-capture',
+      '/api/v1/encounters/{id}/close',
+      '/api/v1/encounters/{id}/start-care',
       '/api/v1/encounters/{id}/symptom-findings',
       '/api/v1/encounters/{id}/triage-decision',
       '/api/v1/encounters/{id}/triage-suggestions',
@@ -37,6 +39,7 @@ describe('Contrato OpenAPI 0.6.x (e2e, sin base)', () => {
       '/api/v1/pre-registrations/{id}/reject',
       '/api/v1/public/consent',
       '/api/v1/public/tenants',
+      '/api/v1/queue',
     ]);
     expect(doc.components?.securitySchemes?.bearer).toMatchObject({
       type: 'http',
@@ -100,9 +103,9 @@ describe('Contrato OpenAPI 0.6.x (e2e, sin base)', () => {
     for (const op of ops) expect(op?.security).toEqual([{ bearer: [] }]);
   });
 
-  it('R21: los tres endpoints de F-03 declaran el esquema bearer y sus respuestas (F-03 publicó 0.4.0; F-04 subió a 0.5.0 y F-05 a 0.6.0)', () => {
+  it('R21: los tres endpoints de F-03 declaran el esquema bearer y sus respuestas (F-03 publicó 0.4.0; F-04 subió a 0.5.0, F-05 a 0.6.0 y F-06 a 0.7.0)', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.6.0');
+    expect(doc.info.version).toBe('0.7.0');
     const vs = doc.paths['/api/v1/encounters/{id}/vital-signs'].post;
     const sf = doc.paths['/api/v1/encounters/{id}/symptom-findings'].post;
     const cc = doc.paths['/api/v1/encounters/{id}/clinical-capture'].get;
@@ -113,9 +116,9 @@ describe('Contrato OpenAPI 0.6.x (e2e, sin base)', () => {
     expect(cc?.responses['200']).toBeDefined();
   });
 
-  it('R1: info.version es 0.6.0 (F-04 publicó 0.5.0) y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
+  it('R1: info.version es 0.7.0 (F-04 publicó 0.5.0) y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.6.0');
+    expect(doc.info.version).toBe('0.7.0');
     const path = doc.paths['/api/v1/encounters/{id}/triage-suggestions'];
     for (const op of [path.post, path.get]) {
       expect(op?.security).toEqual([{ bearer: [] }]);
@@ -379,9 +382,9 @@ describe('Contrato OpenAPI 0.6.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- F-05-api (0.6.0)
 
-  it('R16: info.version es 0.6.0 y POST/GET /encounters/{id}/triage-decision declaran bearer, TriageDecisionDto y problem+json', () => {
+  it('R16: info.version es 0.7.0 (F-05 publicó 0.6.0) y POST/GET /encounters/{id}/triage-decision declaran bearer, TriageDecisionDto y problem+json', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.6.0');
+    expect(doc.info.version).toBe('0.7.0');
     const path = doc.paths['/api/v1/encounters/{id}/triage-decision'];
     for (const op of [path.post, path.get]) {
       expect(op?.security).toEqual([{ bearer: [] }]);
@@ -534,6 +537,156 @@ describe('Contrato OpenAPI 0.6.x (e2e, sin base)', () => {
           },
         },
       ]);
+    }
+  });
+
+  // ---------------------------------------------------------------- F-06-api (0.7.0)
+
+  type Schema = {
+    properties?: Record<string, Record<string, unknown>>;
+    required?: string[];
+  };
+  const schemaOf = (
+    doc: ReturnType<typeof buildOpenApiDocument>,
+    name: string,
+  ) => doc.components?.schemas?.[name] as Schema;
+  const isProblem = {
+    content: { 'application/problem+json': expect.any(Object) as object },
+  };
+
+  it('R1: info.version es 0.7.0 y GET /queue declara bearer, QueueDto, siteId opcional y los tiempos máximos de la Res. 5596', () => {
+    const doc = buildOpenApiDocument(app);
+    expect(doc.info.version).toBe('0.7.0');
+    const op = doc.paths['/api/v1/queue'].get;
+    expect(op?.security).toEqual([{ bearer: [] }]);
+    expect(op?.responses['200']).toMatchObject({
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/QueueDto' },
+        },
+      },
+    });
+    expect(op?.parameters).toEqual([
+      expect.objectContaining({
+        name: 'siteId',
+        in: 'query',
+        required: false,
+        schema: expect.objectContaining({ format: 'uuid' }) as object,
+      }),
+    ]);
+    expect(op?.description).toMatch(/Res\. 5596 de 2015/);
+    expect(op?.description).toMatch(/I = 0 min/);
+    expect(op?.description).toMatch(/II = 30 min/);
+    expect(schemaOf(doc, 'QueueDto').properties).toMatchObject({
+      serverNow: { type: 'string', format: 'date-time' },
+      waitingTriage: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/QueueItemDto' },
+      },
+      triaged: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/QueueItemDto' },
+      },
+      inCare: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/QueueItemDto' },
+      },
+    });
+  });
+
+  it('R2: QueueItemDto y QueuePatientDto documentan exactamente los campos de R2, sin datos personales (R7)', () => {
+    const doc = buildOpenApiDocument(app);
+    const item = schemaOf(doc, 'QueueItemDto');
+    expect(Object.keys(item.properties ?? {}).sort()).toEqual(
+      [
+        'encounterId',
+        'siteId',
+        'siteName',
+        'status',
+        'finalLevel',
+        'arrivalAt',
+        'waitMinutes',
+        'maxWaitMinutes',
+        'overdue',
+        'patient',
+      ].sort(),
+    );
+    expect(item.properties).toMatchObject({
+      finalLevel: { type: 'integer', minimum: 1, maximum: 5, nullable: true },
+      waitMinutes: { type: 'integer', nullable: true },
+      maxWaitMinutes: { type: 'integer', nullable: true },
+      overdue: { type: 'boolean' },
+      patient: { $ref: '#/components/schemas/QueuePatientDto' },
+    });
+    const patient = schemaOf(doc, 'QueuePatientDto');
+    expect(Object.keys(patient.properties ?? {}).sort()).toEqual([
+      'ageYears',
+      'initials',
+      'sex',
+    ]);
+    expect(patient.properties).toMatchObject({
+      initials: { type: 'string', nullable: true },
+      ageYears: { type: 'integer', nullable: true },
+      sex: { enum: ['M', 'F', 'X'], nullable: true },
+    });
+    expect(JSON.stringify([item, patient])).not.toMatch(
+      /fullName|document|birthDate|patientId|chiefComplaint/,
+    );
+  });
+
+  it('R10: POST start-care (R9) y close declaran bearer, sin cuerpo (o {}) y 200 EncounterDto', () => {
+    const doc = buildOpenApiDocument(app);
+    for (const action of ['start-care', 'close']) {
+      const op = doc.paths[`/api/v1/encounters/{id}/${action}`].post;
+      expect([action, op?.security]).toEqual([action, [{ bearer: [] }]]);
+      expect(op?.responses['200']).toMatchObject({
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/EncounterDto' },
+          },
+        },
+      });
+      expect(op?.requestBody).toMatchObject({
+        required: false,
+        content: {
+          'application/json': {
+            schema: { type: 'object', additionalProperties: false },
+          },
+        },
+      });
+    }
+  });
+
+  it('R15: GET /queue documenta 400, 401 y 403, y start-care y close 400, 401, 403, 404 y 409, todos como problem+json', () => {
+    const doc = buildOpenApiDocument(app);
+    const cases: [string, 'get' | 'post', string, string[]][] = [
+      ['/api/v1/queue', 'get', '200', ['400', '401', '403']],
+      [
+        '/api/v1/encounters/{id}/start-care',
+        'post',
+        '200',
+        ['400', '401', '403', '404', '409'],
+      ],
+      [
+        '/api/v1/encounters/{id}/close',
+        'post',
+        '200',
+        ['400', '401', '403', '404', '409'],
+      ],
+    ];
+    for (const [path, method, ok, errors] of cases) {
+      const responses = doc.paths[path][method]?.responses ?? {};
+      expect([path, Object.keys(responses).sort()]).toEqual([
+        path,
+        [ok, ...errors, 'default'].sort(),
+      ]);
+      for (const code of [...errors, 'default']) {
+        expect([path, code, responses[code]]).toMatchObject([
+          path,
+          code,
+          isProblem,
+        ]);
+      }
     }
   });
 });

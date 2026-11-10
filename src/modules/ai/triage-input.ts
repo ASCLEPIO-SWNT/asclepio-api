@@ -1,4 +1,5 @@
 import type { CaptureForSuggestion } from '../encounters/capture-for-suggestion.js';
+import { ageInYears } from '../../common/clock/age.js';
 import { redact } from './redaction.js';
 
 /**
@@ -34,14 +35,8 @@ export interface TriageInputSnapshot {
   symptom_findings: SnapshotFinding[];
 }
 
-/** Edad cumplida en años entre `birthDate` y `today` (fechas civiles YYYY-MM-DD; `today` en America/Bogota). */
-export function ageInYears(birthDate: string, today: string): number {
-  const [by, bm, bd] = birthDate.split('-').map(Number);
-  const [ty, tm, td] = today.split('-').map(Number);
-  // Quien nació un 29 de febrero cumple el 1 de marzo en años no bisiestos (como isAdult de common/clock/age.ts).
-  const beforeBirthday = tm < bm || (tm === bm && td < bd);
-  return ty - by - (beforeBirthday ? 1 : 0);
-}
+// ageInYears vive en common/clock/age.ts (F-06-api, D4); se reexporta para los importadores de F-04.
+export { ageInYears };
 
 /**
  * Construye la instantánea de entrada (R8, R9) a partir de la captura vigente y la fecha civil de hoy en Bogotá.

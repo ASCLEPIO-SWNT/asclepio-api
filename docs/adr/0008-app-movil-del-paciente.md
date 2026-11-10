@@ -36,3 +36,6 @@ Originalmente la app móvil era la herramienta de **recepción** para registrar 
 - [x] **PA-PAC-4** Qué ve el paciente → **solo el estado** de su pre-registro o atención ("pendiente de confirmación", "en espera de triage", "en atención", "cerrada"). **No ve su nivel de triage.**
 - [x] **PA-PAC-5** Consentimiento → **casilla obligatoria** con un texto de tratamiento de datos (Ley 1581 de 2012) que redacta el equipo. Se guarda `consent_at` y la versión del texto. Sin aceptarlo no se crea la cuenta.
 - [x] **PA-PAC-6** Menores → **no tienen cuenta en el MVP**. A los menores los registra recepción directamente en la web.
+
+## Ratificación (humano, 2026-11-09)
+El humano ratifica esta decisión: **la app móvil es solo del paciente; el personal usa la interfaz web.** El ADR local `asclepio-mobile/docs/adr/0002-pacientes-y-personal.md` (2026-10-29), que amplió la APK con acceso de personal (F-01-staff-mobile, F-02-staff-mobile, F-03-mobile y UI-02-mobile), **queda sustituido**. Las funciones de personal del móvil se retiran en un slice propio de `asclepio-mobile`, con spec y aprobación. Ningún slice `F-0X-mobile` de personal se planifica en adelante.

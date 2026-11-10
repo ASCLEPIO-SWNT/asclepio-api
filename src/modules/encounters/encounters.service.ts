@@ -59,6 +59,33 @@ export interface TriageOutcome {
   now: Date;
 }
 
+/** Estados que aparecen en la cola de F-06 (R8): REGISTERED es transitorio; CLOSED y CANCELLED, terminales. */
+const QUEUE_STATUSES: EncounterStatus[] = [
+  'WAITING_TRIAGE',
+  'TRIAGED',
+  'IN_CARE',
+];
+
+/**
+ * Fila de la cola (F-06-api, D2): solo lo necesario para ordenar y calcular espera, iniciales y edad. Sin id del
+ * paciente, documento ni motivo de consulta (R7); el nombre solo sirve para las iniciales y la cola lo descarta (D3).
+ */
+export interface ActiveEncounterForQueue {
+  id: string;
+  siteId: string;
+  siteName: string;
+  status: EncounterStatus;
+  finalLevel: number | null;
+  arrivalAt: Date;
+  patient: {
+    fullName: string | null;
+    /** Fecha civil YYYY-MM-DD. */
+    birthDate: string | null;
+    estimatedAgeYears: number | null;
+    sex: 'M' | 'F' | 'X' | null;
+  };
+}
+
 const ACTIVE_STATUSES = { notIn: ['CLOSED', 'CANCELLED'] as EncounterStatus[] };
 
 export interface NewEncounter {
@@ -443,6 +470,46 @@ export class EncountersService {
     return this.findOne(principal.tenantId, id);
   }
 
+  /** POST /encounters/{id}/start-care (F-06-api, R9, PA-F02-4): TRIAGED → IN_CARE con la transición genérica. */
+  startCare(principal: StaffPrincipal, id: string): Promise<EncounterDto> {
+    return this.statusChange(principal, id, 'IN_CARE');
+  }
+
+  /** POST /encounters/{id}/close (F-06-api, R10, PA-F02-4): IN_CARE → CLOSED con la transición genérica. */
+  close(principal: StaffPrincipal, id: string): Promise<EncounterDto> {
+    return this.statusChange(principal, id, 'CLOSED');
+  }
+
+  /**
+   * Transición de F-06 en su propia transacción (D7, igual que cancel): transition valida la máquina de estados, hace
+   * el UPDATE condicional (dos peticiones simultáneas → un 200 y un 409, R11) e inserta el evento y la auditoría. Solo
+   * cambia status: final_level, triaged_at y triaged_by se conservan (R13).
+   */
+  private async statusChange(
+    principal: StaffPrincipal,
+    id: string,
+    to: 'IN_CARE' | 'CLOSED',
+  ): Promise<EncounterDto> {
+    const r = await this.prisma.$transaction((tx) =>
+      this.transition(
+        principal.tenantId,
+        id,
+        to,
+        { type: 'STAFF', id: principal.id },
+        tx,
+      ),
+    );
+    this.logger.log({
+      msg: 'encounter_status_changed',
+      encounterId: id,
+      fromStatus: r.from,
+      toStatus: r.to,
+      tenantId: principal.tenantId,
+      userId: principal.id,
+    });
+    return this.findOne(principal.tenantId, id);
+  }
+
   /** GET /encounters/{id} (R42, R44): 404 igual para inexistente y de otro tenant. */
   async findOne(tenantId: string, id: string): Promise<EncounterDto> {
     const row = isUuid(id)
@@ -477,6 +544,60 @@ export class EncountersService {
         occurredAt: e.occurredAt.toISOString(),
       })),
     };
+  }
+
+  /**
+   * Atenciones activas de la cola (F-06-api, D2, R1, R5, R8): una sola consulta a encounters filtrada por tenant, sede
+   * opcional y los tres estados activos, sin orden (lo da buildQueue). La sede y el paciente se resuelven con los
+   * services de sus módulos dueños (tenancy, patients), como en toSummaries. Una sede de otro tenant no devuelve nada.
+   */
+  async listActiveForQueue(
+    tenantId: string,
+    siteId?: string,
+  ): Promise<ActiveEncounterForQueue[]> {
+    const rows = await this.prisma.encounter.findMany({
+      where: {
+        tenantId,
+        ...(siteId !== undefined ? { siteId } : {}),
+        status: { in: QUEUE_STATUSES },
+      },
+      select: {
+        id: true,
+        siteId: true,
+        patientId: true,
+        status: true,
+        finalLevel: true,
+        arrivalAt: true,
+      },
+    });
+    if (!rows.length) return [];
+    const [sites, patients] = await Promise.all([
+      this.tenancy.findSiteNames(
+        tenantId,
+        rows.map((r) => r.siteId),
+      ),
+      this.patients.findManyByIds(
+        tenantId,
+        rows.map((r) => r.patientId),
+      ),
+    ]);
+    return rows.map((r) => {
+      const p = patients.get(r.patientId);
+      return {
+        id: r.id,
+        siteId: r.siteId,
+        siteName: sites.get(r.siteId) ?? '',
+        status: r.status,
+        finalLevel: r.finalLevel,
+        arrivalAt: r.arrivalAt,
+        patient: {
+          fullName: p?.fullName ?? null,
+          birthDate: p?.birthDate ?? null,
+          estimatedAgeYears: p?.estimatedAgeYears ?? null,
+          sex: p?.sex ?? null,
+        },
+      };
+    });
   }
 
   /** GET /encounters (R43): filtros, orden arrival_at DESC, id DESC y paginación limit/offset. */

@@ -41,7 +41,7 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 | `encounters` | Pre-registros, atenciones, máquina de estados, línea de tiempo y captura clínica                                                                | `pre_registrations`, `encounters`, `encounter_events`, `vital_signs`, `symptom_findings` | `patients`, `tenancy`, `auth` (`PatientAccountsService`), `users`, `audit` |
 | `triage`     | Decisiones humanas (VALIDATE/CORRECT/MANUAL)                                                                                                    | `triage_decisions`                                                                       | `encounters`, `ai`, `audit`, `users` (nombre del responsable)              |
 | `ai`         | Sugerencia: `LlmClient` (`GroqAdapter`, `OpenRouterAdapter`), `TriagePromptBuilder`, `TriageResponseValidator`, `SafetyGuards`, `TriageAdvisor` | `triage_suggestions`                                                                     | `encounters` (solo lectura de la captura), `audit`, `users` (nombre del responsable) |
-| `queue`      | Cola priorizada                                                                                                                                 | —                                                                                        | `encounters`, `triage`                                                     |
+| `queue`      | Cola priorizada (F-06: solo lectura con `listActiveForQueue`; no usa `triage`)                                                                  | —                                                                                        | `encounters`, `triage`                                                     |
 | `reports`    | Tiempos, cumplimiento, concordancia y CSV                                                                                                       | —                                                                                        | `encounters`, `triage`, `ai`                                               |
 | `audit`      | Escritura append-only de `audit_log`                                                                                                            | `audit_log`                                                                              | —                                                                          |
 
@@ -80,7 +80,7 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 - `PatientsModule` exporta solo el service; `PatientsHttpModule` (solo en `AppModule`) añade `GET/POST /patients` y `GET/PATCH /patient/profile`.
 - `@Throttled()` (`common/throttle/`) = mismo límite que `@PublicThrottled()` pero sin `@Public()`: lo usan `PATCH /patient/profile` y `POST /patient/pre-registrations`.
 - Utilidades transversales movidas a `common/`: `clock/age.ts` (mayoría de edad en Bogotá), `validation/is-calendar-date.ts`, `validation/trimmed-length.ts` y `validation/uuid-param.pipe.ts` (un `{id}` mal formado → 404).
-- `EncountersService.transition(...)` es la transición genérica exportada para F-05/F-06 (UPDATE condicional sobre el estado leído; nunca a `TRIAGED`). `EncounterStateMachine` es una función pura.
+- `EncountersService.transition(...)` es la transición genérica exportada para F-05/F-06 (UPDATE condicional sobre el estado leído; nunca a `TRIAGED`); F-06 la usa en `startCare` y `close`. `EncounterStateMachine` es una función pura.
 - Rutas del paciente bajo `/patient/…`; el paciente sale solo de `pid` y `tid` del token.
 
 ## Captura clínica (F-03)
@@ -103,6 +103,13 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 - Una transacción (D2): `EncountersService.lockForCapture(…, conflictDetail)` bloquea la atención en `WAITING_TRIAGE` (404/409) → `TriageSuggestionsService.findCurrent(tenantId, encounterId, tx)` (sugerencia vigente, exportado por `AiModule`) → `decide` → INSERT de la decisión → **`EncountersService.recordTriage`**, la **única vía a `TRIAGED`** (UPDATE condicional, `final_level`/`triaged_at`/`triaged_by`, evento `TRIAGE_DECIDED` y auditoría). `transition` sigue rechazando `TRIAGED`.
 - El `GET` lee el nivel sugerido de la sugerencia decidida con `TriageSuggestionsService.findSuggestedLevel(tenantId, suggestionId)` (por la carrera de D4 la vigente puede no ser la decidida) y el nombre del responsable con `UsersService.findNames`.
 - `EncounterSummaryDto` (personal) añade `finalLevel`, `triagedAt` y `triagedBy`; los DTO del paciente no cambian (R18).
+
+## Cola y paso a atención (F-06)
+
+- `queue` no tiene tablas: `QueueService` lee con **`EncountersService.listActiveForQueue(tenantId, siteId?)`** (una consulta a `encounters` por tenant, sede opcional y `WAITING_TRIAGE`/`TRIAGED`/`IN_CARE`; la sede y el paciente salen de `TenancyService.findSiteNames` y `PatientsService.findManyByIds`) y aplica `buildQueue` con un único `Clock.now()` por petición (`serverNow`). `QueueController` expone `GET /queue` (`PHYSICIAN`, `NURSE`, `ADMIN`; solo `siteId` UUID). La cola no usa `triage`: el nivel final vive en `encounters`.
+- `queue.rules.ts` (puro): `MAX_WAIT_MINUTES_BY_LEVEL` (I = 0, II = 30, Res. 5596 de 2015; III–V sin tiempo máximo, PA-F06-1), `waitMinutes`, `isOverdue`, `initials` y `buildQueue` (tres secciones y su orden). El nombre del paciente solo se usa para las iniciales: `QueueItemDto` no lleva nombre, documento, fecha de nacimiento, id del paciente ni motivo.
+- La edad (`ageInYears`) vive en `common/clock/age.ts` y la comparten F-04 (`triage-input.ts`, que la reexporta) y la cola.
+- `EncountersService.startCare` y `close` abren su transacción y llaman a `transition(…, 'IN_CARE' | 'CLOSED', …)`, como `cancel`: el UPDATE condicional hace que dos peticiones simultáneas den un 200 y un 409. `EncountersController` expone `POST /encounters/{id}/start-care` y `POST /encounters/{id}/close` (`PHYSICIAN`, sin cuerpo o `{}`, 200 con `EncounterDto`).
 
 ## Scripts y pruebas
 

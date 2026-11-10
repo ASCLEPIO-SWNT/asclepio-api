@@ -152,7 +152,7 @@
       ],
       "contract": {
         "changes": true,
-        "version": null
+        "version": "0.7.0"
       },
       "touches_db": false,
       "acceptance": [
@@ -160,7 +160,7 @@
         "Detalle en specs/F-06-api/requirements.md"
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "F-07-api",

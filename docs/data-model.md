@@ -235,6 +235,12 @@ Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 - Permisos: `asclepio_app` solo `SELECT` e `INSERT` sobre `triage_decisions` (append-only). `encounters` ya tenía `UPDATE` a nivel de tabla (f02).
 - Antes de aplicar la migración en una base con datos hay que comprobar que no hay atenciones en `TRIAGED`/`IN_CARE`/`CLOSED` (el CHECK `encounters_triage_required` fallaría). Las pruebas de integración que fuerzan esos estados como dueño de la base fijan también las tres columnas.
 
+### F-06-api (sin migración; PA-F06-1..5 resueltas el 2026-11-09)
+
+- **Sin cambios de esquema.** La cola lee `encounters` (`final_level` de F-05) con el índice `(tenant_id, status, arrival_at)` de F-02, y la sede y el paciente con los services de `tenancy` y `patients`. El módulo `queue` no tiene tablas.
+- Las transiciones `TRIAGED → IN_CARE` (`POST /encounters/{id}/start-care`) y `IN_CARE → CLOSED` (`POST /encounters/{id}/close`) quedan expuestas para `PHYSICIAN` (PA-F02-4) sobre la transición genérica: evento `STATUS_CHANGED` (from/to, sin payload) y auditoría `ENCOUNTER_STATUS_CHANGED` (`metadata { fromStatus, toStatus }`) en la misma transacción. Solo cambian `status` (y `updated_at`): `final_level`, `triaged_at` y `triaged_by` se conservan, así que el CHECK `encounters_triage_required` se cumple en `IN_CARE` y `CLOSED`.
+- Espera = `arrival_at` → hora del servidor mientras la atención está en `WAITING_TRIAGE` o `TRIAGED` (PA-F06-2); se calcula en la API, no se guarda.
+
 ### Pendiente (preguntas abiertas)
 
 - Validación clínica de la lista de signos y de los rangos provisionales de F-03 por un asesor clínico.
