@@ -55,7 +55,7 @@
   - `R16:` filas = `population.encounters` del resumen con los mismos parámetros, y conteos de `final_level`, `decision_action` y `suggestion_status` que cuadran.
 
   (R11, R13, R15, R16)
-- [ ] T8 Pruebas transversales:
+- [x] T8 Pruebas transversales:
   - `R18:` `RECEPTION`, `NURSE` y `PHYSICIAN` → 403; paciente → 403; sin token → 401; en e2e y en integración.
   - `R1:`/`R2:` por HTTP (400 y 422 en `problem+json`).
   - `R19:` logger capturado en los dos flujos sin datos del paciente ni el contenido del CSV.
