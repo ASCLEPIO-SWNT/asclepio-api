@@ -5,7 +5,7 @@ import { buildOpenApiDocument } from '../src/app.setup.js';
 import { VITAL_SIGN_DEFINITIONS } from '../src/modules/encounters/vital-signs.rules.js';
 import { createApp } from './e2e-app.js';
 
-describe('Contrato OpenAPI 0.7.x (e2e, sin base)', () => {
+describe('Contrato OpenAPI 0.8.x (e2e, sin base)', () => {
   let app: INestApplication<App>;
   beforeAll(async () => {
     app = await createApp();
@@ -40,6 +40,8 @@ describe('Contrato OpenAPI 0.7.x (e2e, sin base)', () => {
       '/api/v1/public/consent',
       '/api/v1/public/tenants',
       '/api/v1/queue',
+      '/api/v1/reports/encounters.csv',
+      '/api/v1/reports/summary',
     ]);
     expect(doc.components?.securitySchemes?.bearer).toMatchObject({
       type: 'http',
@@ -103,9 +105,9 @@ describe('Contrato OpenAPI 0.7.x (e2e, sin base)', () => {
     for (const op of ops) expect(op?.security).toEqual([{ bearer: [] }]);
   });
 
-  it('R21: los tres endpoints de F-03 declaran el esquema bearer y sus respuestas (F-03 publicó 0.4.0; F-04 subió a 0.5.0, F-05 a 0.6.0 y F-06 a 0.7.0)', () => {
+  it('R21: los tres endpoints de F-03 declaran el esquema bearer y sus respuestas (F-03 publicó 0.4.0; F-04 subió a 0.5.0, F-05 a 0.6.0, F-06 a 0.7.0 y F-07 a 0.8.0)', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.7.0');
+    expect(doc.info.version).toBe('0.8.0');
     const vs = doc.paths['/api/v1/encounters/{id}/vital-signs'].post;
     const sf = doc.paths['/api/v1/encounters/{id}/symptom-findings'].post;
     const cc = doc.paths['/api/v1/encounters/{id}/clinical-capture'].get;
@@ -116,9 +118,9 @@ describe('Contrato OpenAPI 0.7.x (e2e, sin base)', () => {
     expect(cc?.responses['200']).toBeDefined();
   });
 
-  it('R1: info.version es 0.7.0 (F-04 publicó 0.5.0) y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
+  it('R1: info.version es 0.8.0 (F-04 publicó 0.5.0) y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.7.0');
+    expect(doc.info.version).toBe('0.8.0');
     const path = doc.paths['/api/v1/encounters/{id}/triage-suggestions'];
     for (const op of [path.post, path.get]) {
       expect(op?.security).toEqual([{ bearer: [] }]);
@@ -382,9 +384,9 @@ describe('Contrato OpenAPI 0.7.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- F-05-api (0.6.0)
 
-  it('R16: info.version es 0.7.0 (F-05 publicó 0.6.0) y POST/GET /encounters/{id}/triage-decision declaran bearer, TriageDecisionDto y problem+json', () => {
+  it('R16: info.version es 0.8.0 (F-05 publicó 0.6.0) y POST/GET /encounters/{id}/triage-decision declaran bearer, TriageDecisionDto y problem+json', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.7.0');
+    expect(doc.info.version).toBe('0.8.0');
     const path = doc.paths['/api/v1/encounters/{id}/triage-decision'];
     for (const op of [path.post, path.get]) {
       expect(op?.security).toEqual([{ bearer: [] }]);
@@ -554,9 +556,9 @@ describe('Contrato OpenAPI 0.7.x (e2e, sin base)', () => {
     content: { 'application/problem+json': expect.any(Object) as object },
   };
 
-  it('R1: info.version es 0.7.0 y GET /queue declara bearer, QueueDto, siteId opcional y los tiempos máximos de la Res. 5596', () => {
+  it('R1: info.version es 0.8.0 y GET /queue declara bearer, QueueDto, siteId opcional y los tiempos máximos de la Res. 5596', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.7.0');
+    expect(doc.info.version).toBe('0.8.0');
     const op = doc.paths['/api/v1/queue'].get;
     expect(op?.security).toEqual([{ bearer: [] }]);
     expect(op?.responses['200']).toMatchObject({
@@ -681,6 +683,114 @@ describe('Contrato OpenAPI 0.7.x (e2e, sin base)', () => {
         [ok, ...errors, 'default'].sort(),
       ]);
       for (const code of [...errors, 'default']) {
+        expect([path, code, responses[code]]).toMatchObject([
+          path,
+          code,
+          isProblem,
+        ]);
+      }
+    }
+  });
+
+  // ---------------------------------------------------------------- F-07-api (0.8.0)
+
+  it('R5: info.version es 0.8.0 y GET /reports/summary declara bearer, ReportSummaryDto, from y to obligatorios y siteId opcional', () => {
+    const doc = buildOpenApiDocument(app);
+    expect(doc.info.version).toBe('0.8.0');
+    const op = doc.paths['/api/v1/reports/summary'].get;
+    expect(op?.security).toEqual([{ bearer: [] }]);
+    expect(op?.responses['200']).toMatchObject({
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/ReportSummaryDto' },
+        },
+      },
+    });
+    for (const path of [
+      '/api/v1/reports/summary',
+      '/api/v1/reports/encounters.csv',
+    ]) {
+      const params = doc.paths[path].get?.parameters as {
+        name: string;
+        in: string;
+        required: boolean;
+        schema: { format?: string };
+      }[];
+      expect(
+        params.map((p) => [p.name, p.in, p.required, p.schema.format]),
+      ).toEqual([
+        ['from', 'query', true, 'date'],
+        ['to', 'query', true, 'date'],
+        ['siteId', 'query', false, 'uuid'],
+      ]);
+    }
+    // Cumplimiento según la Res. 256 de 2016, desde la clasificación.
+    expect(op?.description).toMatch(/Res\. 256 de 2016/);
+    expect(op?.description).toMatch(/desde la clasificación/);
+    expect(
+      Object.keys(schemaOf(doc, 'ReportSummaryDto').properties ?? {}).sort(),
+    ).toEqual(
+      [
+        'period',
+        'generatedAt',
+        'population',
+        'timeToTriage',
+        'timeToCare',
+        'compliance',
+        'concordance',
+        'fallback',
+      ].sort(),
+    );
+    expect(
+      Object.keys(schemaOf(doc, 'ComplianceDto').properties ?? {}).sort(),
+    ).toEqual(
+      [
+        'level',
+        'maxMinutes',
+        'evaluable',
+        'compliant',
+        'percent',
+        'notEvaluated',
+      ].sort(),
+    );
+    expect(schemaOf(doc, 'ConcordanceDto').properties).toMatchObject({
+      weightedKappa: { type: 'number', nullable: true },
+      matrix: {
+        type: 'array',
+        items: { type: 'array', items: { type: 'integer' } },
+      },
+    });
+    expect(
+      Object.keys(schemaOf(doc, 'FallbackDto').properties ?? {}).sort(),
+    ).toEqual(['decisions', 'guards', 'providers', 'suggestions']);
+  });
+
+  it('R11: GET /reports/encounters.csv declara bearer y 200 text/csv, y la descripción avisa de que es un formato interno (no Res. 373 ni SISPRO)', () => {
+    const doc = buildOpenApiDocument(app);
+    const op = doc.paths['/api/v1/reports/encounters.csv'].get;
+    expect(op?.security).toEqual([{ bearer: [] }]);
+    expect(op?.responses['200']).toMatchObject({
+      content: { 'text/csv': { schema: { type: 'string' } } },
+      headers: { 'Content-Disposition': expect.any(Object) as object },
+    });
+    expect(op?.description).toMatch(/FORMATO INTERNO/);
+    expect(op?.description).toMatch(/Res\. 373/);
+    expect(op?.description).toMatch(/SISPRO/);
+    expect(op?.description).toMatch(/Res\. 256 de 2016/);
+  });
+
+  it('R18: los dos endpoints de reportes documentan 400, 401, 403 y 422 como problem+json', () => {
+    const doc = buildOpenApiDocument(app);
+    for (const path of [
+      '/api/v1/reports/summary',
+      '/api/v1/reports/encounters.csv',
+    ]) {
+      const responses = doc.paths[path].get?.responses ?? {};
+      expect([path, Object.keys(responses).sort()]).toEqual([
+        path,
+        ['200', '400', '401', '403', '422', 'default'].sort(),
+      ]);
+      for (const code of ['400', '401', '403', '422', 'default']) {
         expect([path, code, responses[code]]).toMatchObject([
           path,
           code,

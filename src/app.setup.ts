@@ -15,7 +15,7 @@ import { ProblemDetailsFilter } from './common/problem/problem-details.filter.js
 import { ProblemDetailsDto } from './common/problem/problem-details.dto.js';
 
 /** Versión semver del contrato publicado en openapi/asclepio-api.v1.json (ADR 0007). */
-export const API_CONTRACT_VERSION = '0.7.0';
+export const API_CONTRACT_VERSION = '0.8.0';
 export const API_PREFIX = 'api/v1';
 
 /**

@@ -68,7 +68,7 @@
   - Un archivo `docs/reports-csv.md` que documente las columnas de D6, avisando de que es un formato **interno**, no el de la Res. 373 ni SISPRO.
 
   (R12)
-- [ ] T10 Regenerar el snapshot OpenAPI:
+- [x] T10 Regenerar el snapshot OpenAPI:
   - `API_CONTRACT_VERSION = '0.8.0'`, `ReportSummaryDto` y la respuesta `text/csv` del segundo endpoint.
   - Descripción del formato interno y del cumplimiento según la Res. 256 de 2016 (desde la clasificación).
   - Prueba de contrato (`info.version = 0.8.0` y las dos operaciones).
