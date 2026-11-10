@@ -48,6 +48,7 @@ Regla entre repos: **primero el contrato**. `F-0X-web` y `F-0X-mobile` no pasan 
 | F-03-api | done (2026-10-27) | 0.4.0 |
 | F-04-api | done (2026-11-09) | 0.5.0 |
 | F-05-api | done (2026-11-09) | 0.6.0 |
+| F-06-api | done (2026-11-09) | 0.7.0 |
 | Todos los demás | pending | — |
 
 ## Trazabilidad F-0X.ACn → R<n>
@@ -81,6 +82,10 @@ Cada spec (`specs/<id>/requirements.md`) traza sus `R<n>` a los criterios global
 | F-05.AC4 | F-05-api | R22 | ídem |
 | F-05.AC5 | F-05-api | R12, R19 | ídem |
 | F-05.AC6 | F-05-api | R9, R10, R17, R21 | ídem |
+| F-06.AC1 | F-06-api | R1–R3, R5, R6, R8–R14 | `R<n>:` en `src/modules/queue/*.spec.ts`, `test/f06-*` |
+| F-06.AC2 | F-06-api | R1 | ídem |
+| F-06.AC3 | F-06-api | R2, R4 | ídem |
+| F-06.AC5 | F-06-api | R2, R7, R15 | ídem |
 
 ## Alcance del móvil (ratificado 2026-11-09)
 La app móvil es **solo del paciente** (ADR 0008, ratificado por el humano el 2026-11-09). Las funciones de personal añadidas en `asclepio-mobile` el 2026-10-29 (ADR local 0002) se retiran en un slice de limpieza del móvil. F-03 a F-07 no tienen slice móvil.
