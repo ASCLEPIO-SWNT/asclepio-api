@@ -20,7 +20,7 @@
   - `R10:` `percent` con denominador 0 → `null` y redondeo a 1 decimal (kappa a 3).
 
   (R6, R8, R10)
-- [ ] T3 Prueba unitaria + `report-rows.ts` (pura):
+- [x] T3 Prueba unitaria + `report-rows.ts` (pura):
   - `R6:` minutos hasta triage.
   - `R7:` `timeToCare` de I y II (triage → atención, con la media); cumplimiento solo de II con 30 y 31 min en el límite, I sin porcentaje, no evaluable sin `IN_CARE` y III–V sin cumplimiento, usando el `30` **importado** de `queue.rules.ts`.
   - `R8:` solo pares de `VALIDATE`/`CORRECT`, y sub y sobreclasificación.
