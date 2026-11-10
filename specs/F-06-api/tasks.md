@@ -33,7 +33,7 @@
   - Tras `start-care`, la atención pasa de `triaged` a `inCare` en la cola.
 
   (R9, R10, R11, R12, R13)
-- [ ] T6 Pruebas transversales:
+- [x] T6 Pruebas transversales:
   - `R14:` matriz de roles (en la cola, `RECEPTION` → 403; en las transiciones, `NURSE`, `RECEPTION` y `ADMIN` → 403; paciente → 403 en todos; sin token → 401), en e2e y en integración (sin cambios).
   - `R15:` errores en `problem+json` y logger capturado en la cola sin el nombre del paciente.
 
