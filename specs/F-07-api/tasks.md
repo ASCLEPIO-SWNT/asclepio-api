@@ -14,7 +14,7 @@
   - `R3:` límites `[from 00:00 −05:00, to+1 00:00 −05:00)` con `arrival_at` a las 23:59:59 de Bogotá (dentro) y a las 00:00:00 del día siguiente (fuera).
 
   (R1, R2, R3)
-- [ ] T2 Prueba unitaria + `report-stats.ts` (pura):
+- [x] T2 Prueba unitaria + `report-stats.ts` (pura):
   - `R6:` `median` y `p90` con n = 0, 1, 2, 10 y 11.
   - `R8:` `weightedKappa` con acuerdo perfecto → 1, un caso calculado a mano (con la tabla del cálculo en la prueba) y menos de 2 pares → `null`; matriz 5×5.
   - `R10:` `percent` con denominador 0 → `null` y redondeo a 1 decimal (kappa a 3).
