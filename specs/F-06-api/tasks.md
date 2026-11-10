@@ -39,4 +39,4 @@
 
   (R14, R15)
 - [x] T7 Documentación: docs/architecture.md (módulo `queue`, `listActiveForQueue`, `startCare`/`close`, `ageInYears` en `common`) y docs/data-model.md (F-06 sin migración; las transiciones `IN_CARE`/`CLOSED` ya están expuestas, PA-F02-4). (R9, R10)
-- [ ] T8 Regenerar el snapshot OpenAPI: `API_CONTRACT_VERSION = '0.7.0'`, `QueueDto`, `QueueItemDto` y `QueuePatientDto`, las dos operaciones de transición y la descripción de los tiempos máximos; prueba de contrato (`info.version = 0.7.0` y las tres operaciones); `npm run openapi:export`, comprobando que una segunda ejecución no da diff. El leader fija `contract.version = "0.7.0"` en `feature_list.json`. (R1, R2, R9, R10, R14, R15)
+- [x] T8 Regenerar el snapshot OpenAPI: `API_CONTRACT_VERSION = '0.7.0'`, `QueueDto`, `QueueItemDto` y `QueuePatientDto`, las dos operaciones de transición y la descripción de los tiempos máximos; prueba de contrato (`info.version = 0.7.0` y las tres operaciones); `npm run openapi:export`, comprobando que una segunda ejecución no da diff. El leader fija `contract.version = "0.7.0"` en `feature_list.json`. (R1, R2, R9, R10, R14, R15)

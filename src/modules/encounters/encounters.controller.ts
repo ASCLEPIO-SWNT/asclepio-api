@@ -1,4 +1,5 @@
 import {
+  applyDecorators,
   Body,
   Controller,
   Get,
@@ -17,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { CurrentPrincipal, StaffRoles } from '../../common/auth/decorators.js';
 import type { StaffPrincipal } from '../../common/auth/principal.js';
+import { ApiProblemResponse } from '../../common/problem/api-problem-response.js';
 import { UuidParamPipe } from '../../common/validation/uuid-param.pipe.js';
 import {
   CancelEncounterDto,
@@ -27,6 +29,25 @@ import {
   NoBodyDto,
 } from './dto/encounters.dto.js';
 import { EncountersService } from './encounters.service.js';
+
+/** Errores comunes de start-care y close (F-06-api, R11, R12, R14). */
+const TransitionProblems = (from: string) =>
+  applyDecorators(
+    ApiProblemResponse(
+      400,
+      'El cuerpo trae algún campo (errors[] con el campo).',
+    ),
+    ApiProblemResponse(401, 'Sin token válido.'),
+    ApiProblemResponse(403, 'Rol distinto de PHYSICIAN o token de paciente.'),
+    ApiProblemResponse(
+      404,
+      'La atención no existe, es de otro tenant o el id está mal formado.',
+    ),
+    ApiProblemResponse(
+      409,
+      `La atención no está en ${from} (también tras un cambio concurrente).`,
+    ),
+  );
 
 const NO_BODY = {
   required: false,
@@ -95,6 +116,7 @@ export class EncountersController {
   })
   @ApiBody(NO_BODY)
   @ApiOkResponse({ type: EncounterDto })
+  @TransitionProblems('TRIAGED')
   startCare(
     @CurrentPrincipal() principal: StaffPrincipal,
     @Param('id', UuidParamPipe) id: string,
@@ -115,6 +137,7 @@ export class EncountersController {
   })
   @ApiBody(NO_BODY)
   @ApiOkResponse({ type: EncounterDto })
+  @TransitionProblems('IN_CARE')
   close(
     @CurrentPrincipal() principal: StaffPrincipal,
     @Param('id', UuidParamPipe) id: string,
