@@ -42,7 +42,7 @@
   - `R17:` aislamiento entre tenants en los tres.
 
   (R3, R4, R17)
-- [ ] T6 Pruebas de integración + `ReportsService`, `ReportsController` y DTOs (`GET /reports/summary`, `@StaffRoles('ADMIN')`), con un conjunto preparado de atenciones en todos los estados, decisiones de las tres acciones y sugerencias de los cuatro estados, en dos sedes y dos tenants (las sugerencias se insertan como dueño de la base, **nunca con un LLM real**):
+- [x] T6 Pruebas de integración + `ReportsService`, `ReportsController` y DTOs (`GET /reports/summary`, `@StaffRoles('ADMIN')`), con un conjunto preparado de atenciones en todos los estados, decisiones de las tres acciones y sugerencias de los cuatro estados, en dos sedes y dos tenants (las sugerencias se insertan como dueño de la base, **nunca con un LLM real**):
   - `R5:`–`R9:` cifras esperadas calculadas a mano en la prueba.
   - `R4:` filtro de sede, y sede ajena → todo en cero o `null`.
   - `R10:` `generatedAt` del `FixedClock`.
