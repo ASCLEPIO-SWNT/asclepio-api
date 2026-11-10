@@ -35,7 +35,7 @@
   - `R13:` el tipo `ReportRow` no tiene campos de nombre, documento ni motivo.
 
   (R11, R12, R13, R14)
-- [ ] T5 Pruebas de integración + los métodos de lectura de D2:
+- [x] T5 Pruebas de integración + los métodos de lectura de D2:
   - `EncountersService.listForReport`: población por periodo, tenant y sede, con `in_care_at` y `closed_at` tomados de los eventos.
   - `TriageDecisionsService.listByEncounters`: sin `reason`; `TriageModule` exporta el service.
   - `TriageSuggestionsService.listByEncounters`: sin instantánea ni respuesta cruda.

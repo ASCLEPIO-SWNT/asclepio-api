@@ -88,6 +88,25 @@ export interface ActiveEncounterForQueue {
 
 const ACTIVE_STATUSES = { notIn: ['CLOSED', 'CANCELLED'] as EncounterStatus[] };
 
+/**
+ * Atención de la población de un reporte (F-07-api, D2): sin id del paciente, nombre, documento ni motivo de consulta
+ * (R13). in_care_at y closed_at son el occurred_at del STATUS_CHANGED a IN_CARE y a CLOSED (el primero, si hubiera
+ * varios).
+ */
+export interface EncounterForReport {
+  id: string;
+  siteId: string;
+  siteName: string;
+  status: EncounterStatus;
+  origin: EncounterOrigin;
+  complaintSource: ComplaintSource;
+  arrivalAt: Date;
+  triagedAt: Date | null;
+  finalLevel: number | null;
+  inCareAt: Date | null;
+  closedAt: Date | null;
+}
+
 export interface NewEncounter {
   tenantId: string;
   siteId: string;
@@ -601,6 +620,68 @@ export class EncountersService {
   }
 
   /** GET /encounters (R43): filtros, orden arrival_at DESC, id DESC y paginación limit/offset. */
+  /**
+   * Población de los reportes (F-07-api, D2, R3, R4, R17): atenciones del tenant (y de la sede, si llega) con arrival_at
+   * en [start, end), en cualquier estado, ordenadas por arrival_at e id. Una sede de otro tenant o inexistente da una
+   * lista vacía. Los eventos se leen en la misma consulta (relación), sin exponer encounter_events fuera del módulo.
+   */
+  async listForReport(
+    tenantId: string,
+    start: Date,
+    end: Date,
+    siteId?: string,
+  ): Promise<EncounterForReport[]> {
+    const rows = await this.prisma.encounter.findMany({
+      where: {
+        tenantId,
+        ...(siteId !== undefined ? { siteId } : {}),
+        arrivalAt: { gte: start, lt: end },
+      },
+      orderBy: [{ arrivalAt: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        siteId: true,
+        status: true,
+        origin: true,
+        complaintSource: true,
+        arrivalAt: true,
+        triagedAt: true,
+        finalLevel: true,
+        events: {
+          where: {
+            tenantId,
+            type: 'STATUS_CHANGED',
+            toStatus: { in: ['IN_CARE', 'CLOSED'] },
+          },
+          orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
+          select: { toStatus: true, occurredAt: true },
+        },
+      },
+    });
+    if (!rows.length) return [];
+    const sites = await this.tenancy.findSiteNames(
+      tenantId,
+      rows.map((r) => r.siteId),
+    );
+    const firstAt = (
+      events: { toStatus: EncounterStatus | null; occurredAt: Date }[],
+      to: EncounterStatus,
+    ) => events.find((ev) => ev.toStatus === to)?.occurredAt ?? null;
+    return rows.map((r) => ({
+      id: r.id,
+      siteId: r.siteId,
+      siteName: sites.get(r.siteId) ?? '',
+      status: r.status,
+      origin: r.origin,
+      complaintSource: r.complaintSource,
+      arrivalAt: r.arrivalAt,
+      triagedAt: r.triagedAt,
+      finalLevel: r.finalLevel,
+      inCareAt: firstAt(r.events, 'IN_CARE'),
+      closedAt: firstAt(r.events, 'CLOSED'),
+    }));
+  }
+
   async list(
     tenantId: string,
     q: ListEncountersQueryDto,
