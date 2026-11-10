@@ -241,6 +241,13 @@ Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 - Las transiciones `TRIAGED → IN_CARE` (`POST /encounters/{id}/start-care`) y `IN_CARE → CLOSED` (`POST /encounters/{id}/close`) quedan expuestas para `PHYSICIAN` (PA-F02-4) sobre la transición genérica: evento `STATUS_CHANGED` (from/to, sin payload) y auditoría `ENCOUNTER_STATUS_CHANGED` (`metadata { fromStatus, toStatus }`) en la misma transacción. Solo cambian `status` (y `updated_at`): `final_level`, `triaged_at` y `triaged_by` se conservan, así que el CHECK `encounters_triage_required` se cumple en `IN_CARE` y `CLOSED`.
 - Espera = `arrival_at` → hora del servidor mientras la atención está en `WAITING_TRIAGE` o `TRIAGED` (PA-F06-2); se calcula en la API, no se guarda.
 
+### F-07-api (sin migración; PA-F07-1..4 resueltas el 2026-11-10)
+
+- **Sin cambios de esquema.** El módulo `reports` no tiene tablas: lee con `EncountersService.listForReport` (`encounters` con el índice `(tenant_id, arrival_at)` y, en la misma consulta, el `occurred_at` de los `encounter_events` `STATUS_CHANGED` a `IN_CARE` y a `CLOSED` con el índice `(encounter_id, occurred_at, id)`), `TriageDecisionsService.listByEncounters` (`triage_decisions` por `UNIQUE (encounter_id)`, sin `reason`) y `TriageSuggestionsService.listByEncounters` (`triage_suggestions` por `(encounter_id, created_at, id)`, sin `input_snapshot`, `raw_response`, `explanation` ni `attempts`).
+- La única escritura es la auditoría `REPORT_EXPORTED` en `audit_log` (`actor_type = STAFF`, `entity = report`, `entity_id = NULL`, `metadata { from, to, siteId, rows }`) al descargar el CSV. El resumen no se audita (D8).
+- Población = atenciones del tenant (y de la sede) con `arrival_at` en `[from 00:00 −05:00, to+1 00:00 −05:00)`, en cualquier estado. Inicio de atención = `occurred_at` del `STATUS_CHANGED` a `IN_CARE`; el cumplimiento de nivel II se mide de `triaged_at` a ese instante (Res. 256 de 2016), con el `30` de `MAX_WAIT_MINUTES_BY_LEVEL`.
+- El CSV es un formato interno (docs/reports-csv.md), no el de la Res. 373 ni SISPRO.
+
 ### Pendiente (preguntas abiertas)
 
 - Validación clínica de la lista de signos y de los rangos provisionales de F-03 por un asesor clínico.

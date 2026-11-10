@@ -61,7 +61,7 @@
   - `R19:` logger capturado en los dos flujos sin datos del paciente ni el contenido del CSV.
 
   (R1, R2, R18, R19)
-- [ ] T9 Documentación:
+- [x] T9 Documentación:
   - docs/architecture.md: módulo `reports`, los tres métodos de lectura y `TriageModule` exporta su service.
   - docs/data-model.md: F-07 sin migración.
   - docs/verification.md: cómo comprobar el resumen y el CSV a mano.

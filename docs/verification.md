@@ -37,6 +37,7 @@
 - **Paso del humano (F-04-api):** aplicar en Supabase `f04_triage_suggestions` y `f04_app_role_grants` con `DIRECT_URL="<URL directa de Supabase, puerto 5432>" npx prisma migrate deploy`, solo el responsable de backend y avisando antes y después; después comprobar con `SELECT privilege_type FROM information_schema.role_table_grants WHERE grantee = 'asclepio_app' AND table_schema = 'asclepio' AND table_name = 'triage_suggestions';` que solo hay `SELECT` e `INSERT`. Añadir a `.env` `GROQ_MODEL`, `OPENROUTER_MODEL` (y opcionalmente `LLM_TIMEOUT_MS`, `LLM_TOTAL_BUDGET_MS`): sin ellas la API no arranca (R29).
 - **F-05-api:** las suites de F-05 (`test/f05-*.int-spec.ts`, `test/int/f05-fixtures.ts`) insertan las sugerencias directamente como `asclepio_app`: **ninguna prueba llama a Groq ni a OpenRouter**. Las fixtures que fuerzan `TRIAGED`, `IN_CARE` o `CLOSED` fijan `final_level`, `triaged_at` y `triaged_by` (CHECK `encounters_triage_required`, R11).
 - **Paso del humano (F-05-api):** antes de aplicar, comprobar en Supabase (solo lectura) que `SELECT count(*) FROM asclepio.encounters WHERE status IN ('TRIAGED', 'IN_CARE', 'CLOSED');` devuelve 0; si no, no aplicar. Después, `DIRECT_URL="<URL directa de Supabase, puerto 5432>" npx prisma migrate status` (solo deben estar pendientes `f05_triage_decisions` y `f05_app_role_grants`) y `... npx prisma migrate deploy`, solo el responsable de backend y avisando antes y después. Por último, comprobar en `information_schema.role_table_grants` que `asclepio_app` solo tiene `SELECT` e `INSERT` sobre `triage_decisions`, y que `encounters` sigue sin `DELETE`.
+- **F-07-api:** las suites de F-07 (`test/f07-*.int-spec.ts`, `test/int/f07-fixtures.ts`) preparan las atenciones por la API real con un `FixedClock` (llegada, decisión, `start-care`, `close` y `cancel`, con un token emitido a la hora del reloj en cada paso) e insertan las sugerencias **como dueño de la base local** (`DIRECT_URL` de Docker, `insertSuggestionAsOwner`), con proveedor y guard conocidos: **ninguna prueba llama a Groq ni a OpenRouter**. Sin migraciones ni pasos del humano en Supabase.
 - `npm test` y `./init.sh` **no** necesitan base: las pruebas e2e (`test/*.e2e-spec.ts`) usan la app completa sin `DATABASE_URL` (Prisma conecta de forma perezosa).
 
 ## Alta de personal y sedes (scripts CLI, F-01-api)
@@ -44,6 +45,24 @@
 - `npm run users:create -- --email <email> --full-name DEV-<nombre> --role <RECEPTION|NURSE|PHYSICIAN|ADMIN> --tenant DEV-<IPS>`; la contraseña (10–128 caracteres) se lee por la entrada estándar, sin eco. Idempotente por email.
 - `npm run sites:create -- --tenant DEV-<IPS> --name DEV-<sede>`. Idempotente por IPS y nombre.
 - Ambos crean la IPS si no existe, auditan (`USER_CREATED` / `SITE_CREATED`, actor `SYSTEM`) y, mientras `NODE_ENV` no sea `production`, exigen el prefijo `DEV-`. Usan `DATABASE_URL` (de `.env` o del entorno).
+
+## Reportes (F-07-api, comprobación manual)
+
+Con la API levantada (`npm run start:dev`) y un usuario `ADMIN` (`npm run users:create -- … --role ADMIN`):
+
+1. Token: `TOKEN=$(curl -s -X POST localhost:3000/api/v1/auth/login -H 'Content-Type: application/json' -d '{"email":"<admin>","password":"<clave>"}' | jq -r .accessToken)`.
+2. Resumen: `curl -s "localhost:3000/api/v1/reports/summary?from=2026-11-01&to=2026-11-10" -H "Authorization: Bearer $TOKEN" | jq`. Comprueba:
+   - `population.encounters` = atenciones con llegada en el periodo (hora de Bogotá) y `population.triaged` = las que tienen decisión.
+   - `compliance` solo para el nivel 2, con `maxMinutes = 30`, contando de `triagedAt` a `start-care` (Res. 256 de 2016); el nivel 1 solo aparece en `timeToCare`, sin porcentaje.
+   - `concordance.pairs` = decisiones `VALIDATE` + `CORRECT`, y `weightedKappa` es `null` con menos de 2 pares.
+   - Los porcentajes con denominador 0 son `null`.
+3. CSV: `curl -s -D - -o atenciones.csv "localhost:3000/api/v1/reports/encounters.csv?from=2026-11-01&to=2026-11-10" -H "Authorization: Bearer $TOKEN"`. Comprueba:
+   - `Content-Type: text/csv; charset=utf-8` y `Content-Disposition: attachment; filename="asclepio-atenciones-2026-11-01_2026-11-10.csv"`.
+   - Que el archivo tiene cabecera más `population.encounters` filas, con CRLF (`file atenciones.csv`).
+   - Que no aparecen nombres, documentos ni motivos (`grep -i '<nombre del paciente>' atenciones.csv` no devuelve nada).
+   - Que hay un `REPORT_EXPORTED` nuevo en `audit_log`.
+4. Errores: `from` posterior a `to` → 422; `?from=2026-02-30&to=2026-03-01` → 400; un token de `NURSE` → 403. Todos en `application/problem+json`.
+5. Columnas y formato del CSV: docs/reports-csv.md (formato **interno**, no Res. 373 ni SISPRO).
 
 ## Componentes de IA
 

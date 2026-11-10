@@ -1,1 +1,1 @@
-Reportes de tiempos, cumplimiento, concordancia y CSV; sin tablas propias. Llega con F-07-api.
+Reportes de tiempos, cumplimiento, concordancia y CSV (F-07-api, solo `ADMIN`). Sin tablas propias: lee con `EncountersService.listForReport`, `TriageDecisionsService.listByEncounters` y `TriageSuggestionsService.listByEncounters`. Formato del CSV en docs/reports-csv.md.
