@@ -15,7 +15,7 @@
   - `R1:`/`R8:` `buildQueue`: reparto y orden de las tres secciones, empates por `id`, `REGISTERED`/`CLOSED`/`CANCELLED` excluidos, `waitMinutes = null` en `inCare` y `finalLevel = null` en `waitingTriage`.
 
   (R1, R2, R3, R4, R8)
-- [ ] T3 Pruebas de integración + `EncountersService.listActiveForQueue(tenantId, siteId?)` (D2): una sola consulta, solo los campos de D2, filtro por tenant, sede y los tres estados activos. (R1, R5, R8)
+- [x] T3 Pruebas de integración + `EncountersService.listActiveForQueue(tenantId, siteId?)` (D2): una sola consulta, solo los campos de D2, filtro por tenant, sede y los tres estados activos. (R1, R5, R8)
 - [ ] T4 Pruebas de integración + `QueueService`, `QueueController` y DTOs (`GET /queue`, `@StaffRoles('PHYSICIAN', 'NURSE', 'ADMIN')`), con un DTO de consulta que solo admite `siteId` UUID (`forbidNonWhitelisted`):
   - `R1:` atenciones en los seis estados, dos sedes y dos tenants → tres secciones correctas.
   - `R3:` `serverNow` y `waitMinutes` con `FixedClock`.
