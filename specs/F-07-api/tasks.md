@@ -8,7 +8,7 @@
 >
 > **Ramas:** se trabaja en `feature/F-07-api`, creada desde `develop` actualizado, con PR a `develop` (convención del 2026-11-10).
 
-- [ ] T1 Prueba unitaria + `report-period.ts` (pura):
+- [x] T1 Prueba unitaria + `report-period.ts` (pura):
   - `R1:` formatos inválidos y fechas imposibles (`2026-02-30`).
   - `R2:` `from > to` → 422; 366 días → válido; 367 → 422.
   - `R3:` límites `[from 00:00 −05:00, to+1 00:00 −05:00)` con `arrival_at` a las 23:59:59 de Bogotá (dentro) y a las 00:00:00 del día siguiente (fuera).
