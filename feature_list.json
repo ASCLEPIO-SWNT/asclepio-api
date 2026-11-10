@@ -173,7 +173,7 @@
       ],
       "contract": {
         "changes": true,
-        "version": null
+        "version": "0.8.0"
       },
       "touches_db": false,
       "acceptance": [
@@ -181,7 +181,7 @@
         "Detalle en specs/F-07-api/requirements.md"
       ],
       "sdd": true,
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "id": "F-09-api",
