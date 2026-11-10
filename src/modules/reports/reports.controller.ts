@@ -1,5 +1,11 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Query, Res } from '@nestjs/common';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiProduces,
+  ApiTags,
+} from '@nestjs/swagger';
+import type { Response } from 'express';
 import { CurrentPrincipal, StaffRoles } from '../../common/auth/decorators.js';
 import type { StaffPrincipal } from '../../common/auth/principal.js';
 import { ApiProblemResponse } from '../../common/problem/api-problem-response.js';
@@ -34,5 +40,43 @@ export class ReportsController {
     @Query() q: ReportQueryDto,
   ): Promise<ReportSummaryDto> {
     return this.reports.summary(principal, q);
+  }
+
+  @Get('encounters.csv')
+  @StaffRoles('ADMIN')
+  @ApiProduces('text/csv')
+  @ApiOperation({
+    summary: 'CSV de atenciones del periodo (formato interno)',
+    description:
+      'Una fila por atención de la misma población que GET /reports/summary con los mismos parámetros, ordenadas por arrivalAt e id. FORMATO INTERNO documentado en docs/reports-csv.md: NO es el formato oficial de la Res. 373 ni de SISPRO. RFC 4180 (coma, CRLF, cabecera en la primera fila), UTF-8, horas ISO-8601 con -05:00, minutos con 1 decimal y vacío si no hay valor. Columnas: encounter_id, site_name, status, origin, complaint_source, arrival_at, triaged_at, in_care_at, closed_at, final_level, decision_action, suggestion_status, suggested_level, llm_level, guard_applied, provider, minutes_to_triage, minutes_triage_to_care (desde la clasificación hasta la atención médica, Res. 256 de 2016) y compliant (solo nivel II que llegó a IN_CARE: ≤ 30 min). Sin nombre, documento, motivo de consulta, motivo de corrección ni nombres del personal. Las celdas de texto que empiezan por =, +, -, @, tabulador o CR van precedidas de comilla simple. Cada descarga se audita (REPORT_EXPORTED).',
+  })
+  @ApiOkResponse({
+    description:
+      'CSV con Content-Disposition: attachment; filename="asclepio-atenciones-<from>_<to>.csv".',
+    headers: {
+      'Content-Disposition': {
+        description:
+          'attachment; filename="asclepio-atenciones-<from>_<to>.csv"',
+        schema: { type: 'string' },
+      },
+    },
+    content: { 'text/csv': { schema: { type: 'string' } } },
+  })
+  @ApiProblemResponse(400, BAD_PARAMS)
+  @ApiProblemResponse(401, 'Sin token válido.')
+  @ApiProblemResponse(403, 'Rol distinto de ADMIN, o token de paciente.')
+  @ApiProblemResponse(422, BAD_PERIOD)
+  async csv(
+    @CurrentPrincipal() principal: StaffPrincipal,
+    @Query() q: ReportQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<string> {
+    const out = await this.reports.csv(principal, q);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${out.filename}"`,
+    );
+    return out.body;
   }
 }

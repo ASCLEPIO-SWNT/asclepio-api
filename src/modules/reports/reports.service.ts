@@ -2,12 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { StaffPrincipal } from '../../common/auth/principal.js';
 import { Clock } from '../../common/clock/clock.js';
 import { TriageSuggestionsService } from '../ai/triage-suggestions.service.js';
+import { AuditService } from '../audit/audit.service.js';
 import { EncountersService } from '../encounters/encounters.service.js';
 import { TriageDecisionsService } from '../triage/triage-decisions.service.js';
 import type {
   ReportQueryDto,
   ReportSummaryDto,
 } from './dto/report-summary.dto.js';
+import { toCsv } from './report-csv.js';
 import { parsePeriod, type ReportPeriod } from './report-period.js';
 import {
   buildRows,
@@ -15,6 +17,12 @@ import {
   type ReportSuggestionSource,
   summarize,
 } from './report-rows.js';
+
+export interface ReportCsv {
+  filename: string;
+  body: string;
+  rows: number;
+}
 
 interface Loaded {
   period: ReportPeriod;
@@ -35,6 +43,7 @@ export class ReportsService {
     private readonly encounters: EncountersService,
     private readonly decisions: TriageDecisionsService,
     private readonly suggestions: TriageSuggestionsService,
+    private readonly audit: AuditService,
     private readonly clock: Clock,
   ) {}
 
@@ -82,6 +91,35 @@ export class ReportsService {
       period: { from: period.from, to: period.to, siteId },
       generatedAt: generatedAt.toISOString(),
       ...body,
+    };
+  }
+
+  /**
+   * GET /reports/encounters.csv (R11–R16): mismas filas que el resumen con los mismos parámetros (R16) y auditoría
+   * REPORT_EXPORTED (R15, D8). El contenido del CSV nunca se registra (R19).
+   */
+  async csv(principal: StaffPrincipal, q: ReportQueryDto): Promise<ReportCsv> {
+    const { period, siteId, rows } = await this.load(principal.tenantId, q);
+    const body = toCsv(rows);
+    await this.audit.record({
+      action: 'REPORT_EXPORTED',
+      actorType: 'STAFF',
+      actorId: principal.id,
+      tenantId: principal.tenantId,
+      entity: 'report',
+      entityId: null,
+      metadata: { from: period.from, to: period.to, siteId, rows: rows.length },
+    });
+    this.logger.log({
+      msg: 'report_csv_exported',
+      tenantId: principal.tenantId,
+      userId: principal.id,
+      rows: rows.length,
+    });
+    return {
+      filename: `asclepio-atenciones-${period.from}_${period.to}.csv`,
+      body,
+      rows: rows.length,
     };
   }
 }

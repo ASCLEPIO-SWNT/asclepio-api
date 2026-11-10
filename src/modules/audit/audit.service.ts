@@ -28,7 +28,9 @@ export type AuditAction =
   // F-04-api
   | 'TRIAGE_SUGGESTION_CREATED'
   // F-05-api
-  | 'TRIAGE_DECIDED';
+  | 'TRIAGE_DECIDED'
+  // F-07-api (R15, D8): exportación del CSV de atenciones; metadata { from, to, siteId, rows }.
+  | 'REPORT_EXPORTED';
 
 export type AuditJson =
   string | number | boolean | null | AuditJson[] | { [key: string]: AuditJson };

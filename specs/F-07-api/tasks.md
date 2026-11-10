@@ -48,7 +48,7 @@
   - `R10:` `generatedAt` del `FixedClock`.
 
   (R4, R5, R6, R7, R8, R9, R10)
-- [ ] T7 Pruebas de integración + `GET /reports/encounters.csv`:
+- [x] T7 Pruebas de integración + `GET /reports/encounters.csv`:
   - `R11:` `Content-Type`, `Content-Disposition` con el nombre del archivo, y filas.
   - `R13:` búsqueda en el texto del CSV del nombre completo, el documento, el motivo de consulta, el motivo de corrección y los nombres del personal → nada.
   - `R15:` auditoría `REPORT_EXPORTED` con `metadata = { from, to, siteId, rows }`.
