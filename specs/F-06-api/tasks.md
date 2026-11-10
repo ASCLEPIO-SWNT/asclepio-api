@@ -25,7 +25,7 @@
   - `R7:` búsqueda profunda en la respuesta del nombre completo, el documento, `birthDate`, el id del paciente y el motivo → nada.
 
   (R1, R2, R3, R4, R5, R6, R7, R8)
-- [ ] T5 Pruebas de integración + `EncountersService.startCare` y `close` y los endpoints `POST /encounters/:id/start-care` y `POST /encounters/:id/close` (`@StaffRoles('PHYSICIAN')`, `UuidParamPipe`, `@HttpCode(200)`):
+- [x] T5 Pruebas de integración + `EncountersService.startCare` y `close` y los endpoints `POST /encounters/:id/start-care` y `POST /encounters/:id/close` (`@StaffRoles('PHYSICIAN')`, `UuidParamPipe`, `@HttpCode(200)`):
   - `R9:`/`R10:` 200 con `EncounterDto`, evento `STATUS_CHANGED` (from/to) y auditoría `ENCOUNTER_STATUS_CHANGED` en la misma transacción.
   - `R11:` 409 en cada estado no válido (`WAITING_TRIAGE` → `start-care`, `TRIAGED` → `close`, `CLOSED`, `CANCELLED`) y con dos `start-care` simultáneos → un 200 y un 409.
   - `R12:` 404 igual en los tres casos y 400 con cuerpo `{ status: 'CLOSED' }`.

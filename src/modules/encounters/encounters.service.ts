@@ -470,6 +470,46 @@ export class EncountersService {
     return this.findOne(principal.tenantId, id);
   }
 
+  /** POST /encounters/{id}/start-care (F-06-api, R9, PA-F02-4): TRIAGED → IN_CARE con la transición genérica. */
+  startCare(principal: StaffPrincipal, id: string): Promise<EncounterDto> {
+    return this.statusChange(principal, id, 'IN_CARE');
+  }
+
+  /** POST /encounters/{id}/close (F-06-api, R10, PA-F02-4): IN_CARE → CLOSED con la transición genérica. */
+  close(principal: StaffPrincipal, id: string): Promise<EncounterDto> {
+    return this.statusChange(principal, id, 'CLOSED');
+  }
+
+  /**
+   * Transición de F-06 en su propia transacción (D7, igual que cancel): transition valida la máquina de estados, hace
+   * el UPDATE condicional (dos peticiones simultáneas → un 200 y un 409, R11) e inserta el evento y la auditoría. Solo
+   * cambia status: final_level, triaged_at y triaged_by se conservan (R13).
+   */
+  private async statusChange(
+    principal: StaffPrincipal,
+    id: string,
+    to: 'IN_CARE' | 'CLOSED',
+  ): Promise<EncounterDto> {
+    const r = await this.prisma.$transaction((tx) =>
+      this.transition(
+        principal.tenantId,
+        id,
+        to,
+        { type: 'STAFF', id: principal.id },
+        tx,
+      ),
+    );
+    this.logger.log({
+      msg: 'encounter_status_changed',
+      encounterId: id,
+      fromStatus: r.from,
+      toStatus: r.to,
+      tenantId: principal.tenantId,
+      userId: principal.id,
+    });
+    return this.findOne(principal.tenantId, id);
+  }
+
   /** GET /encounters/{id} (R42, R44): 404 igual para inexistente y de otro tenant. */
   async findOne(tenantId: string, id: string): Promise<EncounterDto> {
     const row = isUuid(id)

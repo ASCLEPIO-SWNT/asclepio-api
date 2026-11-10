@@ -84,6 +84,9 @@ export class ReasonDto {
 }
 
 export class RejectPreRegistrationDto extends ReasonDto {}
+
+/** Cuerpo de start-care y close (F-06-api, R12): ninguno o {}. Cualquier campo → 400 (forbidNonWhitelisted). */
+export class NoBodyDto {}
 export class CancelEncounterDto extends ReasonDto {}
 
 export class CreateEncounterDto {
