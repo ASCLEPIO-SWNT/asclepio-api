@@ -114,6 +114,33 @@ describe('queue.rules (DT-02-api: desde la clasificación)', () => {
     });
   });
 
+  describe('maxWaitMinutes', () => {
+    it('R4: maxWaitMinutes por nivel desde MAX_WAIT_MINUTES_BY_LEVEL (I = 0, II = 30, III–V y sin nivel null), en triaged e inCare', () => {
+      const expected = (level: number | null) =>
+        level === null ? null : (MAX_WAIT_MINUTES_BY_LEVEL[level] ?? null);
+      expect([1, 2, 3, 4, 5, null].map(expected)).toEqual([
+        0,
+        30,
+        null,
+        null,
+        null,
+        null,
+      ]);
+      for (const status of ['TRIAGED', 'IN_CARE'] as const) {
+        for (const level of [1, 2, 3, 4, 5, null]) {
+          const i = only(
+            row('e', status, before(90 * MIN), level, before(30 * MIN)),
+          );
+          expect([status, level, i.maxWaitMinutes]).toEqual([
+            status,
+            level,
+            expected(level),
+          ]);
+        }
+      }
+    });
+  });
+
   describe('instantes límite con buildQueue', () => {
     it('R3: nivel II llegado hace 90 min: 30:00.000 → false; 30:00.001 y 30:01 → true con 30; 31:00 → true con 31', () => {
       const cases: [number, boolean, number][] = [

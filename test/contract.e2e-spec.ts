@@ -852,4 +852,15 @@ describe('Contrato OpenAPI 0.9.x (e2e, sin base)', () => {
     expect(String(item.waitMinutes.description)).toMatch(/no decide/);
     expect(String(queue.triaged.description)).toMatch(/minutesSinceTriage/);
   });
+
+  it('R4: la descripción de maxWaitMinutes dice que se cuenta desde la clasificación (Res. 256 de 2016), con I = 0 y II = 30', () => {
+    const doc = buildOpenApiDocument(app);
+    const max = schemaOf(doc, 'QueueItemDto').properties?.maxWaitMinutes;
+    expect(max).toMatchObject({ type: 'integer', nullable: true });
+    const text = String(max?.description);
+    expect(text).toMatch(/desde la clasificación/);
+    expect(text).toMatch(/Res\. 256 de 2016/);
+    expect(text).toMatch(/I = 0/);
+    expect(text).toMatch(/II = 30/);
+  });
 });
