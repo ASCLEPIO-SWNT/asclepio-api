@@ -240,6 +240,7 @@ Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 - **Sin cambios de esquema.** La cola lee `encounters` (`final_level` de F-05) con el índice `(tenant_id, status, arrival_at)` de F-02, y la sede y el paciente con los services de `tenancy` y `patients`. El módulo `queue` no tiene tablas.
 - Las transiciones `TRIAGED → IN_CARE` (`POST /encounters/{id}/start-care`) y `IN_CARE → CLOSED` (`POST /encounters/{id}/close`) quedan expuestas para `PHYSICIAN` (PA-F02-4) sobre la transición genérica: evento `STATUS_CHANGED` (from/to, sin payload) y auditoría `ENCOUNTER_STATUS_CHANGED` (`metadata { fromStatus, toStatus }`) en la misma transacción. Solo cambian `status` (y `updated_at`): `final_level`, `triaged_at` y `triaged_by` se conservan, así que el CHECK `encounters_triage_required` se cumple en `IN_CARE` y `CLOSED`.
 - Espera = `arrival_at` → hora del servidor mientras la atención está en `WAITING_TRIAGE` o `TRIAGED` (PA-F06-2); se calcula en la API, no se guarda.
+- DT-02-api (sin migración): la cola lee también `triaged_at`; la alerta y el orden de `triaged` se cuentan desde la clasificación (tiempo exacto), no se guardan.
 
 ### F-07-api (sin migración; PA-F07-1..4 resueltas el 2026-11-10)
 

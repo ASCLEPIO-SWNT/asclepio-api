@@ -17,12 +17,14 @@ function ago(min: number, sec = 0): Date {
   return new Date(NOW.getTime() - min * 60_000 - sec * 1000);
 }
 
+/** `triagedAt`, si no se indica, es la llegada cuando hay nivel (clasificada al llegar; DT-02-api, T5). */
 function row(
   id: string,
   status: EncounterStatus,
   arrivalAt: Date,
   finalLevel: number | null = null,
   patient: Partial<QueueRow['patient']> = {},
+  triagedAt: Date | null = finalLevel !== null ? arrivalAt : null,
 ): QueueRow {
   return {
     id,
@@ -31,6 +33,7 @@ function row(
     status,
     finalLevel,
     arrivalAt,
+    triagedAt,
     patient: {
       fullName: 'DEV María José Pérez',
       birthDate: '1968-03-15',
@@ -68,11 +71,12 @@ describe('queue.rules (F-06-api)', () => {
       ]);
     });
 
-    it('R4: nivel I vence con espera mayor que 0 y nivel II con espera mayor que 30', () => {
+    // Modificado por DT-02-api: isOverdue recibe los milisegundos exactos desde la clasificación.
+    it('R4: nivel I vence con más de 0 ms y nivel II con más de 30 min, con el tiempo exacto desde la clasificación', () => {
       expect(isOverdue(1, 0)).toBe(false);
       expect(isOverdue(1, 1)).toBe(true);
-      expect(isOverdue(2, 30)).toBe(false);
-      expect(isOverdue(2, 31)).toBe(true);
+      expect(isOverdue(2, 1_800_000)).toBe(false);
+      expect(isOverdue(2, 1_800_001)).toBe(true);
     });
 
     it('R4: III, IV, V y sin nivel nunca vencen', () => {
@@ -97,14 +101,15 @@ describe('queue.rules (F-06-api)', () => {
   });
 
   describe('buildQueue', () => {
-    it('R1: reparte por estado y ordena: waitingTriage por mayor espera; triaged por nivel y espera; inCare por nivel y llegada', () => {
+    // Modificado por DT-02-api (R5): dentro del nivel, triaged va por minutos desde la clasificación, no por la llegada.
+    it('R1: reparte por estado y ordena: waitingTriage por mayor espera; triaged por nivel y minutos desde la clasificación; inCare por nivel y llegada', () => {
       const rows = [
         row('w-1', 'WAITING_TRIAGE', ago(5)),
         row('w-2', 'WAITING_TRIAGE', ago(40)),
-        row('t-3-old', 'TRIAGED', ago(90), 3),
-        row('t-1', 'TRIAGED', ago(2), 1),
-        row('t-2-new', 'TRIAGED', ago(10), 2),
-        row('t-2-old', 'TRIAGED', ago(50), 2),
+        row('t-3-old', 'TRIAGED', ago(90), 3, {}, ago(80)),
+        row('t-1', 'TRIAGED', ago(2), 1, {}, ago(1)),
+        row('t-2-new', 'TRIAGED', ago(10), 2, {}, ago(10)),
+        row('t-2-old', 'TRIAGED', ago(50), 2, {}, ago(5)),
         row('c-2', 'IN_CARE', ago(200), 2),
         row('c-1-new', 'IN_CARE', ago(20), 1),
         row('c-1-old', 'IN_CARE', ago(60), 1),
@@ -112,7 +117,7 @@ describe('queue.rules (F-06-api)', () => {
       const q = buildQueue(rows, NOW);
       expect(q.serverNow).toBe(NOW.toISOString());
       expect(ids(q.waitingTriage)).toEqual(['w-2', 'w-1']);
-      expect(ids(q.triaged)).toEqual(['t-1', 't-2-old', 't-2-new', 't-3-old']);
+      expect(ids(q.triaged)).toEqual(['t-1', 't-2-new', 't-2-old', 't-3-old']);
       expect(ids(q.inCare)).toEqual(['c-1-old', 'c-1-new', 'c-2']);
     });
 
@@ -177,6 +182,7 @@ describe('queue.rules (F-06-api)', () => {
           finalLevel: null,
           arrivalAt: ago(12, 5).toISOString(),
           waitMinutes: 12,
+          minutesSinceTriage: null,
           maxWaitMinutes: null,
           overdue: false,
           patient: { initials: 'DP', ageYears: 58, sex: 'F' },
@@ -191,6 +197,7 @@ describe('queue.rules (F-06-api)', () => {
           finalLevel: 2,
           arrivalAt: ago(31).toISOString(),
           waitMinutes: 31,
+          minutesSinceTriage: 31,
           maxWaitMinutes: 30,
           overdue: true,
           patient: { initials: null, ageYears: 40, sex: null },
@@ -205,6 +212,7 @@ describe('queue.rules (F-06-api)', () => {
           finalLevel: 1,
           arrivalAt: ago(500).toISOString(),
           waitMinutes: null,
+          minutesSinceTriage: null,
           maxWaitMinutes: 0,
           overdue: false,
           patient: { initials: 'DP', ageYears: null, sex: 'X' },
@@ -217,6 +225,7 @@ describe('queue.rules (F-06-api)', () => {
         [
           row('t1', 'TRIAGED', ago(1), 1),
           row('t1-ok', 'TRIAGED', ago(0, 59), 1),
+          row('t1-now', 'TRIAGED', NOW, 1),
           row('c1', 'IN_CARE', ago(300), 1),
           row('w', 'WAITING_TRIAGE', ago(300)),
           row('t5', 'TRIAGED', ago(10_000), 5),
@@ -231,7 +240,9 @@ describe('queue.rules (F-06-api)', () => {
       );
       expect(overdue).toEqual({
         t1: true,
-        't1-ok': false,
+        // Modificado por DT-02-api: tiempo exacto, nivel I vence en cuanto pasa tiempo desde la clasificación.
+        't1-ok': true,
+        't1-now': false,
         c1: false,
         w: false,
         t5: false,

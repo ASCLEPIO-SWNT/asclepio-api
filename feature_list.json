@@ -184,6 +184,27 @@
       "status": "done"
     },
     {
+      "id": "DT-02-api",
+      "global_id": "DT-02",
+      "name": "queue_overdue_from_triage",
+      "title": "Alerta de la cola desde la clasificación (Res. 256 de 2016)",
+      "description": "Deuda técnica de F-06: overdue y maxWaitMinutes de las atenciones TRIAGED se cuentan desde triaged_at (Res. 256 de 2016), no desde la llegada; waitMinutes sigue desde la llegada. Decisión del humano del 2026-11-11.",
+      "depends_on": [
+        "F-06-api",
+        "F-07-api"
+      ],
+      "contract": {
+        "changes": true,
+        "version": "0.9.0"
+      },
+      "touches_db": false,
+      "acceptance": [
+        "Detalle en specs/DT-02-api/requirements.md"
+      ],
+      "sdd": true,
+      "status": "done"
+    },
+    {
       "id": "F-09-api",
       "global_id": "F-09",
       "name": "synthetic_data_demo",

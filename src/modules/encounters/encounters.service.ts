@@ -77,6 +77,8 @@ export interface ActiveEncounterForQueue {
   status: EncounterStatus;
   finalLevel: number | null;
   arrivalAt: Date;
+  /** Hora de la decisión de triage (F-05); la cola cuenta desde ella la alerta y el orden de triaged (DT-02-api). */
+  triagedAt: Date | null;
   patient: {
     fullName: string | null;
     /** Fecha civil YYYY-MM-DD. */
@@ -587,6 +589,7 @@ export class EncountersService {
         status: true,
         finalLevel: true,
         arrivalAt: true,
+        triagedAt: true,
       },
     });
     if (!rows.length) return [];
@@ -609,6 +612,7 @@ export class EncountersService {
         status: r.status,
         finalLevel: r.finalLevel,
         arrivalAt: r.arrivalAt,
+        triagedAt: r.triagedAt,
         patient: {
           fullName: p?.fullName ?? null,
           birthDate: p?.birthDate ?? null,

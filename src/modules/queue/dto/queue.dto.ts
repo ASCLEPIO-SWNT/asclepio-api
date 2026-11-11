@@ -65,19 +65,26 @@ export class QueueItemDto {
     type: 'integer',
     nullable: true,
     description:
-      'Minutos enteros completos desde arrivalAt hasta serverNow (PA-F06-2); null en inCare (la espera terminó).',
+      'Espera desde la llegada: minutos enteros completos desde arrivalAt hasta serverNow (PA-F06-2); null en inCare (la espera terminó). Solo se muestra y ordena waitingTriage: no decide la alerta ni el orden de triaged.',
   })
   waitMinutes: number | null;
   @ApiProperty({
     type: 'integer',
     nullable: true,
     description:
-      'Tiempo máximo del nivel (Res. 5596 de 2015): I = 0, II = 30; null sin nivel o en III–V.',
+      'Minutos enteros completos desde la clasificación (triagedAt) hasta serverNow, en triaged; null en waitingTriage y en inCare (Res. 256 de 2016, DT-02). Ordena triaged dentro de cada nivel.',
+  })
+  minutesSinceTriage: number | null;
+  @ApiProperty({
+    type: 'integer',
+    nullable: true,
+    description:
+      'Tiempo máximo del nivel, contado desde la clasificación (Res. 256 de 2016), con los valores de la Res. 5596 de 2015: I = 0, II = 30; null sin nivel o en III–V.',
   })
   maxWaitMinutes: number | null;
   @ApiProperty({
     description:
-      'true solo en triaged con nivel I y espera > 0 o nivel II y espera > 30.',
+      'true solo en triaged cuando el tiempo exacto desde la clasificación (serverNow − triagedAt, en milisegundos) supera maxWaitMinutes (Res. 256 de 2016): nivel I con cualquier tiempo > 0, nivel II con más de 30 min. Como minutesSinceTriage se muestra en minutos completos, puede ser true con minutesSinceTriage igual al máximo (p. ej. 30 min y 1 s). Nunca en III–V, waitingTriage ni inCare.',
   })
   overdue: boolean;
   @ApiProperty({ type: QueuePatientDto }) patient: QueuePatientDto;
@@ -87,18 +94,19 @@ export class QueueDto {
   @ApiProperty({
     format: 'date-time',
     description:
-      'Hora del servidor con la que se calcularon todas las esperas de la respuesta.',
+      'Hora del servidor con la que se calcularon todas las esperas, los minutos desde la clasificación y las alertas de la respuesta.',
   })
   serverNow: string;
   @ApiProperty({
     type: [QueueItemDto],
-    description: 'WAITING_TRIAGE, mayor espera primero.',
+    description:
+      'WAITING_TRIAGE, mayor espera desde la llegada (waitMinutes) primero.',
   })
   waitingTriage: QueueItemDto[];
   @ApiProperty({
     type: [QueueItemDto],
     description:
-      'TRIAGED, nivel ascendente y, en cada nivel, mayor espera primero.',
+      'TRIAGED, nivel ascendente y, en cada nivel, más tiempo desde la clasificación primero (mayor minutesSinceTriage; Res. 256 de 2016), con los empates por id. Las que no tienen triagedAt, al final.',
   })
   triaged: QueueItemDto[];
   @ApiProperty({

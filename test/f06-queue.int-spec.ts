@@ -21,6 +21,7 @@ interface QueueItemBody {
   finalLevel: number | null;
   arrivalAt: string;
   waitMinutes: number | null;
+  minutesSinceTriage: number | null;
   maxWaitMinutes: number | null;
   overdue: boolean;
   patient: { initials: string | null; ageYears: number | null; sex: string };
@@ -139,7 +140,8 @@ describe('F-06: GET /queue (integración)', () => {
     for (const staff of [physician, nurse, admin]) {
       const q = (await getQueue(staff.token).expect(200)).body as QueueBody;
       expect(ids(q.waitingTriage)).toEqual([e.wOld, e.wNewB]);
-      // Nivel ascendente y, dentro del nivel II, mayor espera primero (50 min antes que 10 min).
+      // Nivel ascendente y, dentro del nivel II, más tiempo desde la clasificación primero (DT-02-api, R5): los fixtures
+      // se clasifican al llegar, así que 50 min antes que 10 min, como en F-06.
       expect(ids(q.triaged)).toEqual([e.t1, e.t2Old, e.t2NewB, e.t3]);
       // IN_CARE forzado en la base con nivel 3: misma prioridad, llegada ascendente.
       expect(ids(q.inCare)).toEqual([e.inCareOld, e.inCareNew]);
@@ -169,6 +171,7 @@ describe('F-06: GET /queue (integración)', () => {
       finalLevel: null,
       arrivalAt: new Date(NOW.getTime() - 60 * MIN).toISOString(),
       waitMinutes: 60,
+      minutesSinceTriage: null,
       maxWaitMinutes: null,
       overdue: false,
       patient: { initials: 'DR', ageYears: 56, sex: 'M' },
@@ -181,6 +184,7 @@ describe('F-06: GET /queue (integración)', () => {
       finalLevel: 2,
       arrivalAt: new Date(NOW.getTime() - 10 * MIN).toISOString(),
       waitMinutes: 10,
+      minutesSinceTriage: 10,
       maxWaitMinutes: 30,
       overdue: false,
       patient: { initials: 'DR', ageYears: 56, sex: 'M' },
@@ -189,6 +193,7 @@ describe('F-06: GET /queue (integración)', () => {
       status: 'IN_CARE',
       finalLevel: 3,
       waitMinutes: null,
+      minutesSinceTriage: null,
       maxWaitMinutes: null,
       overdue: false,
     });
@@ -221,7 +226,8 @@ describe('F-06: GET /queue (integración)', () => {
     await getQueue(physician.token, `?now=${NOW.toISOString()}`).expect(400);
   });
 
-  it('R4: overdue en nivel I con espera > 0 y en nivel II con espera > 30, justo antes y después del límite; III nunca', async () => {
+  // Modificado por DT-02-api: overdue con el tiempo exacto desde la clasificación (I > 0, II > 30 min).
+  it('R4: overdue en nivel I con más de 0 ms y en nivel II con más de 30 min desde la clasificación, justo en el límite y después; III nunca', async () => {
     const overdue = async (at: Date) => {
       clock.set(at);
       // Token emitido a esa hora del reloj fijo (el de beforeAll caducaría).
@@ -238,15 +244,15 @@ describe('F-06: GET /queue (integración)', () => {
     clock.set(NOW);
     const l1 = await f3.encounter(t, rec);
     await triage(l1, 1);
-    const at59s = await overdue(new Date(NOW.getTime() + 59_000));
-    expect(at59s[l1]).toEqual([0, false]);
-    const at60s = await overdue(new Date(NOW.getTime() + 60_000));
-    expect(at60s[l1]).toEqual([0, true]);
-    // Nivel II que llegó 10 min antes de NOW: vence al pasar de 30 a 31 minutos completos.
-    const at30 = await overdue(new Date(NOW.getTime() + 20 * MIN + 59_000));
+    const atNow = await overdue(NOW);
+    expect(atNow[l1]).toEqual([0, false]);
+    const at1s = await overdue(new Date(NOW.getTime() + 1000));
+    expect(at1s[l1]).toEqual([0, true]);
+    // Nivel II clasificado 10 min antes de NOW: vence al pasar de 30 min exactos desde la clasificación.
+    const at30 = await overdue(new Date(NOW.getTime() + 20 * MIN));
     expect(at30[e.t2NewB]).toEqual([30, false]);
-    const at31 = await overdue(new Date(NOW.getTime() + 21 * MIN));
-    expect(at31[e.t2NewB]).toEqual([30, true]);
+    const at30s1 = await overdue(new Date(NOW.getTime() + 20 * MIN + 1000));
+    expect(at30s1[e.t2NewB]).toEqual([30, true]);
     // III con espera muy larga, WAITING_TRIAGE e IN_CARE: nunca vencen.
     const late = await overdue(new Date(NOW.getTime() + 24 * 60 * MIN));
     expect(late[e.t3]).toEqual([null, false]);
