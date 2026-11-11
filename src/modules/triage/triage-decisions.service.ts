@@ -42,6 +42,14 @@ export const NOT_WAITING_TRIAGE_DECISION =
 /** 404 de R16 (distinto del de R14). */
 export const NO_DECISION = 'La atención no tiene una decisión de triage.';
 
+/** Decisión para los reportes (F-07-api, D2): sin reason, decided_by ni decided_at. */
+export interface DecisionForReport {
+  encounterId: string;
+  action: TriageDecisionDto['action'];
+  level: number;
+  suggestionId: string | null;
+}
+
 const ROW_SELECT = {
   id: true,
   encounterId: true,
@@ -192,6 +200,26 @@ export class TriageDecisionsService {
       userId: principal.id,
     });
     return this.toDto(tenantId, result.row, result.suggestedLevel);
+  }
+
+  /**
+   * Decisiones de las atenciones dadas, del tenant (F-07-api, D2, R17): sin motivo de corrección ni responsable (R13).
+   * Lista vacía → sin consulta.
+   */
+  async listByEncounters(
+    tenantId: string,
+    encounterIds: string[],
+  ): Promise<DecisionForReport[]> {
+    if (!encounterIds.length) return [];
+    return this.prisma.triageDecision.findMany({
+      where: { tenantId, encounterId: { in: encounterIds } },
+      select: {
+        encounterId: true,
+        action: true,
+        level: true,
+        suggestionId: true,
+      },
+    });
   }
 
   /** GET /encounters/{id}/triage-decision (R14–R16). */

@@ -52,6 +52,18 @@ const ROW_SELECT = {
 type Row = Prisma.TriageSuggestionGetPayload<{ select: typeof ROW_SELECT }>;
 
 /** Sugerencia vigente para la decisión de triage de F-05 (D2): id, estado y nivel sugerido (ya ajustado). */
+/** Sugerencia para los reportes (F-07-api, D2): sin input_snapshot, raw_response, explicación ni attempts. */
+export interface SuggestionForReport {
+  id: string;
+  encounterId: string;
+  status: 'OK' | 'INVALID_OUTPUT' | 'TIMEOUT' | 'FAILED';
+  suggestedLevel: number | null;
+  llmLevel: number | null;
+  guardApplied: boolean;
+  provider: 'GROQ' | 'OPENROUTER' | null;
+  createdAt: Date;
+}
+
 export interface CurrentSuggestionRow {
   id: string;
   status: 'OK' | 'INVALID_OUTPUT' | 'TIMEOUT' | 'FAILED';
@@ -199,6 +211,31 @@ export class TriageSuggestionsService {
       where: { tenantId, encounterId },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: { id: true, status: true, suggestedLevel: true },
+    });
+  }
+
+  /**
+   * Todas las sugerencias de las atenciones dadas, del tenant (F-07-api, D2, R17): sin instantánea, respuesta cruda,
+   * explicación ni intentos. Lista vacía → sin consulta.
+   */
+  async listByEncounters(
+    tenantId: string,
+    encounterIds: string[],
+  ): Promise<SuggestionForReport[]> {
+    if (!encounterIds.length) return [];
+    return this.prisma.triageSuggestion.findMany({
+      where: { tenantId, encounterId: { in: encounterIds } },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        encounterId: true,
+        status: true,
+        suggestedLevel: true,
+        llmLevel: true,
+        guardApplied: true,
+        provider: true,
+        createdAt: true,
+      },
     });
   }
 

@@ -42,7 +42,7 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 | `triage`     | Decisiones humanas (VALIDATE/CORRECT/MANUAL)                                                                                                    | `triage_decisions`                                                                       | `encounters`, `ai`, `audit`, `users` (nombre del responsable)              |
 | `ai`         | Sugerencia: `LlmClient` (`GroqAdapter`, `OpenRouterAdapter`), `TriagePromptBuilder`, `TriageResponseValidator`, `SafetyGuards`, `TriageAdvisor` | `triage_suggestions`                                                                     | `encounters` (solo lectura de la captura), `audit`, `users` (nombre del responsable) |
 | `queue`      | Cola priorizada (F-06: solo lectura con `listActiveForQueue`; no usa `triage`)                                                                  | —                                                                                        | `encounters`, `triage`                                                     |
-| `reports`    | Tiempos, cumplimiento, concordancia y CSV                                                                                                       | —                                                                                        | `encounters`, `triage`, `ai`                                               |
+| `reports`    | Tiempos, cumplimiento, concordancia y CSV (F-07: solo lectura; audita la descarga del CSV)                                                      | —                                                                                        | `encounters`, `triage`, `ai`, `audit` (y la constante pura `queue.rules`)  |
 | `audit`      | Escritura append-only de `audit_log`                                                                                                            | `audit_log`                                                                              | —                                                                          |
 
 ## Dependencias
@@ -108,8 +108,20 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 
 - `queue` no tiene tablas: `QueueService` lee con **`EncountersService.listActiveForQueue(tenantId, siteId?)`** (una consulta a `encounters` por tenant, sede opcional y `WAITING_TRIAGE`/`TRIAGED`/`IN_CARE`; la sede y el paciente salen de `TenancyService.findSiteNames` y `PatientsService.findManyByIds`) y aplica `buildQueue` con un único `Clock.now()` por petición (`serverNow`). `QueueController` expone `GET /queue` (`PHYSICIAN`, `NURSE`, `ADMIN`; solo `siteId` UUID). La cola no usa `triage`: el nivel final vive en `encounters`.
 - `queue.rules.ts` (puro): `MAX_WAIT_MINUTES_BY_LEVEL` (I = 0, II = 30, Res. 5596 de 2015; III–V sin tiempo máximo, PA-F06-1), `waitMinutes`, `isOverdue`, `initials` y `buildQueue` (tres secciones y su orden). El nombre del paciente solo se usa para las iniciales: `QueueItemDto` no lleva nombre, documento, fecha de nacimiento, id del paciente ni motivo.
+- DT-02-api: `listActiveForQueue` devuelve también `triaged_at`; la alerta (`overdue`, tiempo exacto en ms) y el orden de `triaged` (`minutesSinceTriage`) se cuentan desde la clasificación, como la Res. 256 de 2016; `waitMinutes` sigue desde la llegada.
 - La edad (`ageInYears`) vive en `common/clock/age.ts` y la comparten F-04 (`triage-input.ts`, que la reexporta) y la cola.
 - `EncountersService.startCare` y `close` abren su transacción y llaman a `transition(…, 'IN_CARE' | 'CLOSED', …)`, como `cancel`: el UPDATE condicional hace que dos peticiones simultáneas den un 200 y un 409. `EncountersController` expone `POST /encounters/{id}/start-care` y `POST /encounters/{id}/close` (`PHYSICIAN`, sin cuerpo o `{}`, 200 con `EncounterDto`).
+
+## Reportes (F-07)
+
+- `reports` no tiene tablas y solo es para `ADMIN`. `ReportsController` expone `GET /reports/summary` (JSON) y `GET /reports/encounters.csv` (`text/csv`), con el mismo `ReportQueryDto` (`from`, `to` en `YYYY-MM-DD`, `siteId?` UUID; `forbidNonWhitelisted`).
+- `ReportsService` carga la población en **tres consultas mediante services** (D2), sin tocar tablas ajenas:
+  - **`EncountersService.listForReport(tenantId, start, end, siteId?)`**: atenciones por `arrival_at` en `[start, end)`, con la sede de `TenancyService.findSiteNames` y, en la misma consulta, `in_care_at`/`closed_at` de sus `encounter_events` `STATUS_CHANGED`. Sin datos del paciente ni motivo.
+  - **`TriageDecisionsService.listByEncounters(tenantId, ids)`**: sin `reason`. **`TriageModule` exporta ahora `TriageDecisionsService`.**
+  - **`TriageSuggestionsService.listByEncounters(tenantId, ids)`**: sin instantánea, respuesta cruda, explicación ni intentos.
+- Después aplica funciones puras: `report-period.ts` (periodo en Bogotá, −05:00 fijo; 400/422), `report-stats.ts` (mediana, p90 por rango más cercano, porcentajes y kappa de Cohen ponderado cuadrático), `report-rows.ts` (`buildRows`: una fila por atención, con la sugerencia decidida o, si no la hay, la vigente; `summarize`) y `report-csv.ts` (`toCsv`: RFC 4180, CRLF, horas `-05:00` y neutralización de fórmulas).
+- El cumplimiento del nivel II se mide de `triaged_at` a `IN_CARE` (Res. 256 de 2016) con el `30` **importado** de `queue/queue.rules.ts` (`MAX_WAIT_MINUTES_BY_LEVEL`). No se duplica.
+- La descarga del CSV se audita con `REPORT_EXPORTED` mediante `AuditService`. Los logs solo llevan recuentos. Formato del CSV: docs/reports-csv.md (interno).
 
 ## Scripts y pruebas
 

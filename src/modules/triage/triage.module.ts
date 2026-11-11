@@ -14,5 +14,7 @@ import { TriageDecisionsService } from './triage-decisions.service.js';
   imports: [EncountersModule, AiModule, AuditModule, UsersModule],
   controllers: [TriageDecisionsController],
   providers: [TriageDecisionsService],
+  // F-07-api: reports lee las decisiones con listByEncounters.
+  exports: [TriageDecisionsService],
 })
 export class TriageModule {}
