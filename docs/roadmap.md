@@ -50,6 +50,7 @@ Regla entre repos: **primero el contrato**. `F-0X-web` y `F-0X-mobile` no pasan 
 | F-05-api | done (2026-11-09) | 0.6.0 |
 | F-06-api | done (2026-11-09) | 0.7.0 |
 | F-07-api | done (2026-11-10) | 0.8.0 |
+| DT-02-api | done (2026-11-11) | 0.9.0 (cola: alerta y orden desde la clasificación, Res. 256 de 2016) |
 | Todos los demás | pending | — |
 
 ## Trazabilidad F-0X.ACn → R<n>
