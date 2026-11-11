@@ -10,7 +10,7 @@ Sin migraciones (design.md, "Impacto en datos"). Sin preguntas abiertas (PA-DT02
 
   Instantes límite (llegada a −90 min): nivel II a 30:00.000 → `false`; a 30:00.001 y a 30:01 → `true`, con `minutesSinceTriage = 30`; a 31:00 → `true` con 31. Nivel I a 0 ms → `false`; a 1 ms y a 1 s → `true`, con `minutesSinceTriage = 0`. (R1, R2, R3, R6, R7, R8)
 
-- [ ] T3 Prueba unitaria R5 (ejemplo de nivel II con llegada −50/clasificación −45 antes que llegada −90/clasificación −10; empates por `id`; `waitingTriage` e `inCare` sin cambios; `waitMinutes` desde la llegada) + implementación: comparador `byMinutesSinceTriageDesc` (nulos al final) en la sección `triaged` de `buildQueue`. (R5, R8)
+- [x] T3 Prueba unitaria R5 (ejemplo de nivel II con llegada −50/clasificación −45 antes que llegada −90/clasificación −10; empates por `id`; `waitingTriage` e `inCare` sin cambios; `waitMinutes` desde la llegada) + implementación: comparador `byMinutesSinceTriageDesc` (nulos al final) en la sección `triaged` de `buildQueue`. (R5, R8)
 - [ ] T4 Prueba unitaria R11: la constante que importa `reports` es la misma y vale 30 para el nivel II; con 30 min exactos de clasificación a atención, `overdue` es `false` y el cumplimiento de `report-rows.ts` es `true`; con 30 min y 1 ms, `overdue` es `true` y el cumplimiento, `false`. Sin código nuevo si pasa. (R11)
 - [ ] T5 Adaptar las pruebas de F-06 (design.md, "Pruebas de F-06 afectadas"):
   - `queue.rules.spec.ts`:

@@ -158,6 +158,73 @@ describe('queue.rules (DT-02-api: desde la clasificación)', () => {
     });
   });
 
+  describe('orden de triaged', () => {
+    it('R5: dentro del nivel, más tiempo desde la clasificación primero (llegó −50/clasificada −45 antes que llegó −90/clasificada −10)', () => {
+      const q = buildQueue(
+        [
+          row('a-late', 'TRIAGED', before(90 * MIN), 2, before(10 * MIN)),
+          row('b-early', 'TRIAGED', before(50 * MIN), 2, before(45 * MIN)),
+          row('c-3', 'TRIAGED', before(200 * MIN), 3, before(150 * MIN)),
+          row('d-1', 'TRIAGED', before(5 * MIN), 1, before(1 * MIN)),
+        ],
+        NOW,
+      );
+      expect(ids(q.triaged)).toEqual(['d-1', 'b-early', 'a-late', 'c-3']);
+      // waitMinutes sigue contando desde la llegada.
+      expect(q.triaged.map((i) => i.waitMinutes)).toEqual([5, 50, 90, 200]);
+      expect(q.triaged.map((i) => i.minutesSinceTriage)).toEqual([
+        1, 45, 10, 150,
+      ]);
+    });
+
+    it('R5: empates de minutesSinceTriage (minutos completos) por id ascendente', () => {
+      const q = buildQueue(
+        [
+          row('d', 'TRIAGED', before(20 * MIN), 2, before(7 * MIN)),
+          row('c', 'TRIAGED', before(90 * MIN), 2, before(7 * MIN + 30_000)),
+        ],
+        NOW,
+      );
+      expect(ids(q.triaged)).toEqual(['c', 'd']);
+    });
+
+    it('R5: waitingTriage (mayor espera) e inCare (nivel y llegada) conservan el orden de F-06', () => {
+      const q = buildQueue(
+        [
+          row('w-1', 'WAITING_TRIAGE', before(5 * MIN), null, null),
+          row('w-2', 'WAITING_TRIAGE', before(40 * MIN), null, null),
+          row('c-2', 'IN_CARE', before(200 * MIN), 2, before(1 * MIN)),
+          row('c-1-new', 'IN_CARE', before(20 * MIN), 1, before(19 * MIN)),
+          row('c-1-old', 'IN_CARE', before(60 * MIN), 1, before(1 * MIN)),
+        ],
+        NOW,
+      );
+      expect(ids(q.waitingTriage)).toEqual(['w-2', 'w-1']);
+      expect(ids(q.inCare)).toEqual(['c-1-old', 'c-1-new', 'c-2']);
+    });
+
+    it('R8: TRIAGED sin triaged_at va al final de triaged, también si tiene nivel y frente a otra sin nivel con triaged_at', () => {
+      const q = buildQueue(
+        [
+          row('z-broken', 'TRIAGED', before(900 * MIN), null, null),
+          row('y-nolevel', 'TRIAGED', before(1 * MIN), null, before(1 * MIN)),
+          row('x-broken-2', 'TRIAGED', before(900 * MIN), 2, null),
+          row('t-2', 'TRIAGED', before(10 * MIN), 2, before(5 * MIN)),
+          row('t-5', 'TRIAGED', before(10 * MIN), 5, before(5 * MIN)),
+        ],
+        NOW,
+      );
+      // Sin triaged_at, al final aunque tenga nivel (imposible por el CHECK de F-05); entre ellas, nivel e id.
+      expect(ids(q.triaged)).toEqual([
+        't-2',
+        't-5',
+        'y-nolevel',
+        'x-broken-2',
+        'z-broken',
+      ]);
+    });
+  });
+
   describe('estados fuera de triaged y fila incoherente', () => {
     it('R6: IN_CARE → overdue false, minutesSinceTriage null, waitMinutes null y maxWaitMinutes según su nivel', () => {
       const cases: [number, number | null][] = [

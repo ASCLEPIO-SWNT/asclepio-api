@@ -143,12 +143,20 @@ const byLevel = (a: QueueItem, b: QueueItem) =>
   (a.finalLevel ?? 6) - (b.finalLevel ?? 6);
 const byWaitDesc = (a: QueueItem, b: QueueItem) =>
   (b.waitMinutes ?? 0) - (a.waitMinutes ?? 0);
+/** Sin minutesSinceTriage (TRIAGED sin triaged_at, R8 de DT-02-api) al final de triaged. */
+const byClassifiedFirst = (a: QueueItem, b: QueueItem) =>
+  Number(a.minutesSinceTriage === null) - Number(b.minutesSinceTriage === null);
+/** Más tiempo desde la clasificación primero (R5 de DT-02-api, PA-DT02-1 opción (b)); nulos al final. */
+const byMinutesSinceTriageDesc = (a: QueueItem, b: QueueItem) =>
+  (b.minutesSinceTriage ?? -1) - (a.minutesSinceTriage ?? -1);
 const byArrival = (a: QueueItem, b: QueueItem) =>
   Date.parse(a.arrivalAt) - Date.parse(b.arrivalAt);
 
 /**
- * Las tres secciones de la cola (R1, R8): waitingTriage por mayor espera; triaged por nivel ascendente y mayor espera;
- * inCare por nivel ascendente y llegada ascendente. Empates por id. REGISTERED, CLOSED y CANCELLED no aparecen.
+ * Las tres secciones de la cola (R1, R8 de F-06): waitingTriage por mayor espera desde la llegada; triaged por nivel
+ * ascendente y más tiempo desde la clasificación (R5 de DT-02-api), con las que no tienen triaged_at al final (R8 de
+ * DT-02-api); inCare por nivel ascendente y llegada ascendente. Empates por id. REGISTERED, CLOSED y CANCELLED no
+ * aparecen.
  */
 export function buildQueue(rows: QueueRow[], now: Date): Queue {
   const today = bogotaDate(now);
@@ -169,7 +177,12 @@ export function buildQueue(rows: QueueRow[], now: Date): Queue {
   return {
     serverNow: now.toISOString(),
     waitingTriage: section('WAITING_TRIAGE', byWaitDesc),
-    triaged: section('TRIAGED', byLevel, byWaitDesc),
+    triaged: section(
+      'TRIAGED',
+      byClassifiedFirst,
+      byLevel,
+      byMinutesSinceTriageDesc,
+    ),
     inCare: section('IN_CARE', byLevel, byArrival),
   };
 }
