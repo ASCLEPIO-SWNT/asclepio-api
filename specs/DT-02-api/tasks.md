@@ -12,7 +12,7 @@ Sin migraciones (design.md, "Impacto en datos"). Sin preguntas abiertas (PA-DT02
 
 - [x] T3 Prueba unitaria R5 (ejemplo de nivel II con llegada −50/clasificación −45 antes que llegada −90/clasificación −10; empates por `id`; `waitingTriage` e `inCare` sin cambios; `waitMinutes` desde la llegada) + implementación: comparador `byMinutesSinceTriageDesc` (nulos al final) en la sección `triaged` de `buildQueue`. (R5, R8)
 - [x] T4 Prueba unitaria R11: la constante que importa `reports` es la misma y vale 30 para el nivel II; con 30 min exactos de clasificación a atención, `overdue` es `false` y el cumplimiento de `report-rows.ts` es `true`; con 30 min y 1 ms, `overdue` es `true` y el cumplimiento, `false`. Sin código nuevo si pasa. (R11)
-- [ ] T5 Adaptar las pruebas de F-06 (design.md, "Pruebas de F-06 afectadas"):
+- [x] T5 Adaptar las pruebas de F-06 (design.md, "Pruebas de F-06 afectadas"):
   - `queue.rules.spec.ts`:
     - helper `row(...)` con `triagedAt` (por defecto `arrivalAt` si hay nivel);
     - **"R1: reparte por estado y ordena…"** con `triagedAt` explícitos, el título "triaged por nivel y minutos desde la clasificación" y el orden esperado nuevo de `triaged`;
