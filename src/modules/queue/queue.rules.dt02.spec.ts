@@ -1,7 +1,16 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { EncounterStatus } from '../encounters/encounter-state-machine.js';
+import {
+  buildRows,
+  COMPLIANCE_LEVEL,
+  COMPLIANCE_MAX_MINUTES,
+  type ReportEncounterSource,
+} from '../reports/report-rows.js';
 import {
   buildQueue,
   isOverdue,
+  MAX_WAIT_MINUTES_BY_LEVEL,
   minutesSinceTriage,
   type QueueItem,
   type QueueRow,
@@ -286,6 +295,63 @@ describe('queue.rules (DT-02-api: desde la clasificación)', () => {
         overdue: true,
       });
       expect(ids(q.triaged)).toEqual(['t2']);
+    });
+  });
+
+  describe('coherencia con el cumplimiento de F-07 (reports)', () => {
+    it('R11: reports toma su máximo de la misma constante MAX_WAIT_MINUTES_BY_LEVEL (30 para el nivel II), sin literal', () => {
+      expect(COMPLIANCE_LEVEL).toBe(2);
+      expect(COMPLIANCE_MAX_MINUTES).toBe(MAX_WAIT_MINUTES_BY_LEVEL[2]);
+      expect(MAX_WAIT_MINUTES_BY_LEVEL[2]).toBe(30);
+      const src = readFileSync(
+        join(process.cwd(), 'src/modules/reports/report-rows.ts'),
+        'utf8',
+      );
+      expect(src).toContain(
+        "import { MAX_WAIT_MINUTES_BY_LEVEL } from '../queue/queue.rules.js';",
+      );
+      expect(src).toMatch(
+        /COMPLIANCE_MAX_MINUTES\s*=\s*MAX_WAIT_MINUTES_BY_LEVEL\[COMPLIANCE_LEVEL\]/,
+      );
+    });
+
+    it('R11: con 30 min exactos de la clasificación a la atención, no vencida y cumplida; con 30 min y 1 ms, vencida y no cumplida', () => {
+      const arrivalAt = before(120 * MIN);
+      const triagedAt = before(60 * MIN);
+      const cases: [number, boolean, boolean][] = [
+        [30 * MIN - 1, false, true],
+        [30 * MIN, false, true],
+        [30 * MIN + 1, true, false],
+        [30 * MIN + 1000, true, false],
+      ];
+      for (const [toCare, overdue, compliant] of cases) {
+        const inCareAt = new Date(triagedAt.getTime() + toCare);
+        // La cola leída en el instante en que pasa a IN_CARE (serverNow = inCareAt), aún en TRIAGED.
+        const item = only(
+          row('e', 'TRIAGED', arrivalAt, 2, triagedAt),
+          inCareAt,
+        );
+        const source: ReportEncounterSource = {
+          id: 'e',
+          siteId: SITE,
+          siteName: 'DEV-Sede Norte',
+          status: 'IN_CARE',
+          origin: 'DIRECT',
+          complaintSource: 'TYPED',
+          arrivalAt,
+          triagedAt,
+          finalLevel: 2,
+          inCareAt,
+          closedAt: null,
+        };
+        const [report] = buildRows([source], [], []);
+        expect([toCare, item.overdue, report.compliant]).toEqual([
+          toCare,
+          overdue,
+          compliant,
+        ]);
+        expect(item.overdue).toBe(!report.compliant);
+      }
     });
   });
 });
