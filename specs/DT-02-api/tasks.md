@@ -36,7 +36,7 @@ Sin migraciones (design.md, "Impacto en datos"). Sin preguntas abiertas (PA-DT02
   (R3, R5, R6, R9)
 
 - [x] T7 Prueba de contrato R10 (bloque `DT-02-api` en `test/contract.e2e-spec.ts`) + implementación: `QueueItemDto.minutesSinceTriage` (`integer`, `nullable`, requerido) y descripciones de `waitMinutes`, `maxWaitMinutes`, `overdue` (tiempo exacto; puede ser `true` con `minutesSinceTriage` igual al máximo), `QueueDto.triaged` y de la operación `GET /queue` (manteniendo `I = 0 min` y `II = 30 min`); añadir `minutesSinceTriage` a la lista exacta de campos de la prueba R2 de F-06 en ese archivo. (R4, R10)
-- [ ] T8 Documentación (design.md, "Documentación de producto"):
+- [x] T8 Documentación (design.md, "Documentación de producto"):
   - enmienda de **F-06.AC2** (dentro de cada nivel, mayor tiempo desde la clasificación primero; `WAITING_TRIAGE` por mayor espera desde la llegada), de PA-F06-2 y de PA-F06-1 (tiempo exacto desde la clasificación: II > 30 min, I vencida en cuanto pasa cualquier tiempo) en `docs/product/features/F-06.md`;
   - notas "Modificado por DT-02-api" en `specs/F-06-api/requirements.md` (glosario: vencida y secciones; R1; R4; PA-F06-2) y `specs/F-06-api/design.md` (riesgos 1 y 3);
   - una línea en `src/modules/queue/README.md`, `docs/architecture.md` (sección de la cola) y `docs/data-model.md` (párrafo de F-06: la cola lee `triaged_at`).
