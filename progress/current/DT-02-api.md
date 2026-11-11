@@ -25,3 +25,15 @@
 
 ## Aprobación
 - 2026-11-11: el humano aprobó la spec por chat ("apruebo"). DT-02-api → **in_progress**.
+
+## Implementación (implementer)
+- 2026-11-11: T1–T9 hechas. Contrato **0.9.0** exportado (`openapi/asclepio-api.v1.json`, `info.version = 0.9.0`); segunda exportación sin diff. El leader debe anotar `contract.version = "0.9.0"` en `feature_list.json`.
+
+### Aviso para F-06-web (slice web propio, p. ej. DT-02-web; no se edita desde aquí)
+- Sin regenerar tipos, la web sigue funcionando: toma `overdue` tal como llega y respeta el orden del servidor; `minutesSinceTriage` se ignora en tiempo de ejecución.
+- Al regenerar (`npm run api:types` con 0.9.0), `QueueItemDto.minutesSinceTriage` (integer | null) es **requerido**: `src/features/queue/testing/queueFixtures.ts` y cualquier literal de la cola dejan de compilar hasta añadirlo.
+- La fila de «Clasificadas» muestra la espera desde la llegada junto a «Máx. {n} min» / «Atención inmediata»: el máximo ahora se compara con el tiempo desde la clasificación. Conviene mostrar `minutesSinceTriage` («Clasificada hace {n} min») o reformular el máximo («Máx. {n} min desde la clasificación»), en los 5 idiomas (`messages/features/*.json`).
+- **Toda fila de nivel I en «Clasificadas» aparece con la alerta** desde la primera lectura tras la clasificación (tiempo exacto, máximo 0), y una fila de nivel II puede verse con «30 min» y la alerta a la vez (entre 30:00.001 y 30:59.999). La web no debe "corregirlo" (F-06-web R5).
+- **La guía de `/cola` deja de ser cierta**: "las clasificadas van por nivel y, en cada nivel, primero la mayor espera" (`dashboards.test.tsx` y los mensajes de la guía) pasa a "primero la que lleva más tiempo desde la clasificación"; "supera el tiempo máximo de su nivel" puede precisar "desde la clasificación".
+- Revisar pruebas o la spec de F-06-web que asuman "Clasificadas por mayor espera" en el orden de los fixtures.
+- `queue_overdue` («Tiempo máximo superado») sigue siendo válido. `docs/ui-dashboards.md` debe citar la versión enmendada de PA-F06-2.

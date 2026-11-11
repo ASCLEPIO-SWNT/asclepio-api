@@ -43,5 +43,5 @@ Sin migraciones (design.md, "Impacto en datos"). Sin preguntas abiertas (PA-DT02
 
   (R2, R4, R5)
 
-- [ ] T9 Regenerar el snapshot OpenAPI (`npm run openapi:export`) y fijar `info.version = 0.9.0`. El leader anota `contract.version = "0.9.0"` en `feature_list.json`. Dejar en `progress/current/DT-02-api.md` el aviso para F-06-web (design.md, "Impacto en F-06-web"), incluidos la guía de `/cola`, que deja de ser cierta, y el nivel I siempre con alerta en «Clasificadas». (R10)
+- [x] T9 Regenerar el snapshot OpenAPI (`npm run openapi:export`) y fijar `info.version = 0.9.0`. El leader anota `contract.version = "0.9.0"` en `feature_list.json`. Dejar en `progress/current/DT-02-api.md` el aviso para F-06-web (design.md, "Impacto en F-06-web"), incluidos la guía de `/cola`, que deja de ser cierta, y el nivel I siempre con alerta en «Clasificadas». (R10)
 - [ ] T10 `npm run lint && npm run typecheck && npm test && npm run test:int` y `./init.sh` en verde. (R1–R11)

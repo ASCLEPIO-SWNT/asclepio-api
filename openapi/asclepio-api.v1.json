@@ -1800,7 +1800,7 @@
     },
     "/api/v1/queue": {
       "get": {
-        "description": "Atenciones activas del tenant (o de la sede siteId) en tres secciones: waitingTriage, triaged e inCare. La espera se mide desde la llegada (arrivalAt) hasta serverNow, con el reloj del servidor. Tiempos máximos de la Res. 5596 de 2015: nivel I = 0 min (inmediato) y nivel II = 30 min; III, IV y V sin tiempo máximo ni alerta (PA-F06-1). overdue solo en triaged. Del paciente solo se devuelven iniciales, edad y sexo.",
+        "description": "Atenciones activas del tenant (o de la sede siteId) en tres secciones: waitingTriage, triaged e inCare, con el reloj del servidor (serverNow). La espera (waitMinutes) se mide desde la llegada (arrivalAt) y ordena waitingTriage. El tiempo máximo, la alerta y el orden de triaged se cuentan desde la clasificación (triagedAt), como la Res. 256 de 2016: triaged va por nivel y, en cada nivel, por mayor minutesSinceTriage. Tiempos máximos de la Res. 5596 de 2015: nivel I = 0 min (inmediato) y nivel II = 30 min; III, IV y V sin tiempo máximo ni alerta (PA-F06-1). overdue solo en triaged, con el tiempo exacto desde la clasificación (nivel I vencido en cuanto pasa cualquier tiempo; nivel II, con más de 30 min). Del paciente solo se devuelven iniciales, edad y sexo.",
         "operationId": "QueueController_get",
         "parameters": [
           {
@@ -2111,7 +2111,7 @@
   "info": {
     "title": "Asclepio API",
     "description": "Triage de urgencias asistido por IA. La IA propone, el profesional decide.",
-    "version": "0.8.0",
+    "version": "0.9.0",
     "contact": {}
   },
   "tags": [],
@@ -3956,16 +3956,21 @@
           "waitMinutes": {
             "type": "integer",
             "nullable": true,
-            "description": "Minutos enteros completos desde arrivalAt hasta serverNow (PA-F06-2); null en inCare (la espera terminó)."
+            "description": "Espera desde la llegada: minutos enteros completos desde arrivalAt hasta serverNow (PA-F06-2); null en inCare (la espera terminó). Solo se muestra y ordena waitingTriage: no decide la alerta ni el orden de triaged."
+          },
+          "minutesSinceTriage": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Minutos enteros completos desde la clasificación (triagedAt) hasta serverNow, en triaged; null en waitingTriage y en inCare (Res. 256 de 2016, DT-02). Ordena triaged dentro de cada nivel."
           },
           "maxWaitMinutes": {
             "type": "integer",
             "nullable": true,
-            "description": "Tiempo máximo del nivel (Res. 5596 de 2015): I = 0, II = 30; null sin nivel o en III–V."
+            "description": "Tiempo máximo del nivel, contado desde la clasificación (Res. 256 de 2016), con los valores de la Res. 5596 de 2015: I = 0, II = 30; null sin nivel o en III–V."
           },
           "overdue": {
             "type": "boolean",
-            "description": "true solo en triaged con nivel I y espera > 0 o nivel II y espera > 30."
+            "description": "true solo en triaged cuando el tiempo exacto desde la clasificación (serverNow − triagedAt, en milisegundos) supera maxWaitMinutes (Res. 256 de 2016): nivel I con cualquier tiempo > 0, nivel II con más de 30 min. Como minutesSinceTriage se muestra en minutos completos, puede ser true con minutesSinceTriage igual al máximo (p. ej. 30 min y 1 s). Nunca en III–V, waitingTriage ni inCare."
           },
           "patient": {
             "$ref": "#/components/schemas/QueuePatientDto"
@@ -3979,6 +3984,7 @@
           "finalLevel",
           "arrivalAt",
           "waitMinutes",
+          "minutesSinceTriage",
           "maxWaitMinutes",
           "overdue",
           "patient"
@@ -3990,17 +3996,17 @@
           "serverNow": {
             "type": "string",
             "format": "date-time",
-            "description": "Hora del servidor con la que se calcularon todas las esperas de la respuesta."
+            "description": "Hora del servidor con la que se calcularon todas las esperas, los minutos desde la clasificación y las alertas de la respuesta."
           },
           "waitingTriage": {
-            "description": "WAITING_TRIAGE, mayor espera primero.",
+            "description": "WAITING_TRIAGE, mayor espera desde la llegada (waitMinutes) primero.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/QueueItemDto"
             }
           },
           "triaged": {
-            "description": "TRIAGED, nivel ascendente y, en cada nivel, mayor espera primero.",
+            "description": "TRIAGED, nivel ascendente y, en cada nivel, más tiempo desde la clasificación primero (mayor minutesSinceTriage; Res. 256 de 2016), con los empates por id. Las que no tienen triagedAt, al final.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/QueueItemDto"
