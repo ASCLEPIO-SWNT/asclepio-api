@@ -26,7 +26,7 @@ Sin migraciones (design.md, "Impacto en datos"). Sin preguntas abiertas (PA-DT02
 
   (R1, R2, R3, R5)
 
-- [ ] T6 Pruebas de integración R3, R5, R6 y R9 en `test/dt02-queue.int-spec.ts` (Docker, `FixedClock`; clasificar con `POST /triage-decision` con el reloj en la hora deseada, nunca con `setStatus`):
+- [x] T6 Pruebas de integración R3, R5, R6 y R9 en `test/dt02-queue.int-spec.ts` (Docker, `FixedClock`; clasificar con `POST /triage-decision` con el reloj en la hora deseada, nunca con `setStatus`):
   - nivel II con llegada a `T − 90 min` y clasificación a `T − 30 min`: en `T` → `waitMinutes = 90`, `minutesSinceTriage = 30`, `overdue = false`; en `T + 1 ms` y `T + 1 s` → `overdue = true` con `minutesSinceTriage = 30`;
   - nivel I clasificado en `T`: en `T` → `false`; en `T + 1 s` → `true`;
   - el ejemplo de orden de R5;
