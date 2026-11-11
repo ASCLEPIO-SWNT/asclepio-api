@@ -3,7 +3,7 @@
 Sin migraciones (design.md, "Impacto en datos"). Sin preguntas abiertas (PA-DT02-1 → (b), PA-DT02-2 → (a)). Requisito previo: spec aprobada.
 
 - [x] T1 Prueba R1 (`test/f06-queue-source.int-spec.ts` y nueva `test/dt02-queue.int-spec.ts`: `listActiveForQueue` devuelve `triagedAt`) + implementación: `EncountersService.listActiveForQueue` añade `triagedAt` al `select` y a `ActiveEncounterForQueue`. (R1)
-- [ ] T2 Pruebas unitarias R1, R2, R3, R6, R7 y R8 en `src/modules/queue/queue.rules.dt02.spec.ts` (primero, en rojo) + implementación en `queue.rules.ts`:
+- [x] T2 Pruebas unitarias R1, R2, R3, R6, R7 y R8 en `src/modules/queue/queue.rules.dt02.spec.ts` (primero, en rojo) + implementación en `queue.rules.ts`:
   - `QueueRow.triagedAt` y `minutesSinceTriage(triagedAt, now)` (`floor`, minutos completos);
   - `isOverdue(level, elapsedMs)` con `elapsedMs > max · 60 000` (tiempo exacto) y `toItem` con `minutesSinceTriage` y `overdue` solo en `TRIAGED`, con el mismo `now`;
   - JSDoc de `MAX_WAIT_MINUTES_BY_LEVEL` con la Res. 5596 de 2015 y la Res. 256 de 2016.
