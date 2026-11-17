@@ -51,6 +51,21 @@ Regla entre repos: **primero el contrato**. `F-0X-web` y `F-0X-mobile` no pasan 
 | F-06-api | done (2026-11-09) | 0.7.0 |
 | F-07-api | done (2026-11-10) | 0.8.0 |
 | DT-02-api | done (2026-11-11) | 0.9.0 (cola: alerta y orden desde la clasificación, Res. 256 de 2016) |
+| F-09-api | done (2026-11-17) | — (sin cambios de contrato; seed `npm run db:seed` / `prisma db seed`) |
+| F-02-web | done (2026-10-27) | consume 0.4.0 |
+| F-02-mobile | done (2026-10-27) | consume 0.4.0 |
+| UI-01-web | done (2026-10-28) | consume 0.4.0 |
+| F-03-web | done (2026-10-28) | consume 0.4.0 |
+| UI-02-web | done (2026-10-29) | consume 0.4.0 |
+| UI-01-mobile | done (2026-10-29) | consume 0.4.0 |
+| UI-03-web | done (2026-11-07) | consume 0.4.0 |
+| UI-04-web | done (2026-11-09) | consume 0.4.0 |
+| F-04-web | done (2026-11-09) | consume 0.5.0 |
+| F-05-web | done (2026-11-10) | consume 0.6.0 |
+| F-06-web | done (2026-11-10) | consume 0.7.0 |
+| DT-01-mobile | done (2026-11-10) | consume 0.4.0 |
+| DT-02-web | done (2026-11-11) | consume 0.9.0 |
+| F-07-web | done (2026-11-13) | consume 0.9.0 |
 | Todos los demás | pending | — |
 
 ## Trazabilidad F-0X.ACn → R<n>
@@ -113,6 +128,6 @@ No se implementa nada que dependa de estas preguntas hasta que se respondan. El 
 | ~~PA-F06-1..5~~ | Resueltas el 2026-11-09 (spec de F-06-api): solo I (0 min) y II (30 min) de la Res. 5596, III–V sin alerta; espera desde la llegada hasta `IN_CARE`; refresco de 30 s; cola por sede con filtro; iniciales, edad y sexo | — |
 | ~~PA-F07-1..4~~ | Resueltas el 2026-11-10 (spec de F-07-api): CSV interno (no oficial), kappa ponderado cuadrático, n/mediana/p90, sin documento; cumplimiento del Triage II según la Res. 256 de 2016 (desde la clasificación) | — |
 | PA-F08-1..2 | Texto editado tras el dictado, dispositivos objetivo | F-08 |
-| PA-F09-1 | Volumen de los datos de demo | F-09 |
+| ~~PA-F09-1~~ | Resuelta el 2026-11-17: 1 IPS y 1 sede; 1 usuario por rol; 8 cuentas de paciente; 30 atenciones cerradas en 7 días (niveles I–V, 5 correcciones) y 6 vivas para la demo (incluido el caso de las 7:42 p. m.) | — |
 | ~~PA-ADR3~~ | Resuelta el 2026-10-26: solo el responsable de backend ejecuta `migrate deploy` en la base compartida y avisa al equipo | — |
 | ~~PA-TEST~~ | Resuelta el 2026-10-26: las pruebas de integración usan PostgreSQL local (Docker); Supabase solo para desarrollo y demo | — |
