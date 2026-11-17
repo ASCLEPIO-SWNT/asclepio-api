@@ -8,14 +8,22 @@ if (urls.length === 0) {
   process.exit(1);
 }
 for (const [i, raw] of urls.entries()) {
-  let host;
+  let hosts;
   try {
-    host = new URL(raw).hostname;
+    const url = new URL(raw);
+    // pg-connection-string prioriza ?host= (y libpq ?hostaddr=) sobre el host de la URL: también deben ser locales.
+    hosts = [
+      url.hostname,
+      ...url.searchParams.getAll('host'),
+      ...url.searchParams.getAll('hostaddr'),
+    ];
   } catch {
-    process.stderr.write(`assert-local-db: la URL nº ${i + 1} no es válida. Abortado.\n`);
+    process.stderr.write(
+      `assert-local-db: la URL nº ${i + 1} no es válida. Abortado.\n`,
+    );
     process.exit(1);
   }
-  if (!LOCAL_HOSTS.has(host)) {
+  if (hosts.some((h) => !LOCAL_HOSTS.has(h))) {
     process.stderr.write(
       `assert-local-db: la URL nº ${i + 1} no apunta a localhost/127.0.0.1. Abortado: las pruebas de integración solo usan el PostgreSQL local de Docker.\n`,
     );

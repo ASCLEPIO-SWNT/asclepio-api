@@ -107,3 +107,10 @@ La contraseña común es `DEV-demo-clave-2026`:
 
 - Los datos `DEV-try1-…` y `DEV-test-<sufijo>-…` de las ejecuciones quedan en la base de Docker local; no se pueden borrar porque son append-only.
 - Al cerrar: `feature_list.json`, `docs/roadmap.md` (fila F-09-api y "Estado de slices") y `progress/history.md`.
+
+## Correcciones de la revisión (progress/review_F-09-api.md)
+
+- **O1 y O2 (2026-11-17):**
+  - O1: `seed-guard.ts` y `scripts/assert-local-db.mjs` rechazan también los parámetros `?host=` y `?hostaddr=` no locales, que pg-connection-string prioriza (prueba nueva en `seed-guard.spec.ts`).
+  - O2: al reanudar un pre-registro `PENDING` ya creado, la llegada sale de su `pre_registered_at` (`pre_registered_at − at.preRegistered`) y no del "ahora" de la ejecución (`seed-runner.ts`).
+  - Lint, typecheck, `npm test` (270 unitarias + 84 e2e) y `npm run test:int` (41 suites, 342 pruebas) en verde. Ninguna ejecución contra Supabase.

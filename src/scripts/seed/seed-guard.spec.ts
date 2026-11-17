@@ -28,6 +28,25 @@ describe('assertSeedTarget (guardián del seed, F-09-api)', () => {
     }
   });
 
+  it('F-09.AC1: aborta si la query lleva un host o hostaddr no local (pg-connection-string los prioriza)', () => {
+    for (const q of [
+      '?host=db.remote.example',
+      '?hostaddr=10.0.0.5',
+      '?host=localhost&host=db.remote.example',
+      '?host=%2Fvar%2Frun%2Fpostgresql',
+    ]) {
+      expect(() => assertSeedTarget({ DATABASE_URL: `${LOCAL}${q}` })).toThrow(
+        SeedGuardError,
+      );
+      expect(() =>
+        assertSeedTarget({ DATABASE_URL: LOCAL, DIRECT_URL: `${LOCAL}${q}` }),
+      ).toThrow(SeedGuardError);
+    }
+    expect(() =>
+      assertSeedTarget({ DATABASE_URL: `${LOCAL}?host=127.0.0.1` }),
+    ).not.toThrow();
+  });
+
   it('F-09.AC1: aborta sin DATABASE_URL o con una URL inválida', () => {
     expect(() => assertSeedTarget({})).toThrow(SeedGuardError);
     expect(() => assertSeedTarget({ DATABASE_URL: 'no-es-url' })).toThrow(

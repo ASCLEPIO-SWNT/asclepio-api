@@ -294,7 +294,7 @@ class SeedRunner {
     if (!encounter) {
       const arrival = plannedArrival(s, this.now, this.today);
       if (s.origin === 'PRE_REGISTRATION') {
-        const preId = await this.preRegistration(
+        const pre = await this.preRegistration(
           s,
           tenantId,
           siteId,
@@ -302,11 +302,12 @@ class SeedRunner {
           complaint,
           arrival,
         );
-        if (s.target === 'PENDING' || !preId) return;
-        this.at(arrival);
+        if (s.target === 'PENDING' || !pre) return;
+        // Al reanudar, la llegada se calcula desde el pre-registro ya creado, no desde el "ahora" de esta ejecución.
+        this.at(pre.arrival);
         await this.app
           .get(PreRegistrationsService)
-          .confirm(staff.RECEPTION, preId, { identityVerified: true });
+          .confirm(staff.RECEPTION, pre.id, { identityVerified: true });
       } else {
         this.at(arrival);
         await this.app.get(EncountersService).createDirect(staff.RECEPTION, {
@@ -323,7 +324,10 @@ class SeedRunner {
     await this.progress(s, tenantId, encounter, staff);
   }
 
-  /** Pre-registro desde el móvil (principal de paciente). Devuelve el id si sigue PENDING; null si ya se resolvió. */
+  /**
+   * Pre-registro desde el móvil (principal de paciente). Devuelve su id y la llegada prevista si sigue PENDING (si ya
+   * existía, la llegada sale de su pre_registered_at: pre_registered_at − at.preRegistered); null si ya se resolvió.
+   */
   private async preRegistration(
     s: SeedScenario,
     tenantId: string,
@@ -331,7 +335,7 @@ class SeedRunner {
     patient: PatientRef,
     complaint: string,
     arrival: Date,
-  ): Promise<string | null> {
+  ): Promise<{ id: string; arrival: Date } | null> {
     if (!patient.accountId) {
       throw new SeedError(`Escenario ${s.code}: el paciente no tiene cuenta.`);
     }
@@ -342,10 +346,18 @@ class SeedRunner {
         chiefComplaintText: complaint,
       },
       orderBy: [{ preRegisteredAt: 'desc' }, { id: 'desc' }],
-      select: { id: true, status: true },
+      select: { id: true, status: true, preRegisteredAt: true },
     });
     if (existing) {
-      if (existing.status === 'PENDING') return existing.id;
+      if (existing.status === 'PENDING') {
+        return {
+          id: existing.id,
+          arrival: plusMinutes(
+            existing.preRegisteredAt,
+            -(s.at.preRegistered ?? 0),
+          ),
+        };
+      }
       if (s.target === 'PENDING') return null;
       throw new SeedError(
         `Escenario ${s.code}: el pre-registro ya no está pendiente y no tiene atención.`,
@@ -362,7 +374,7 @@ class SeedRunner {
       { siteId, chiefComplaintText: complaint, complaintSource: s.source },
     );
     this.created.preRegistrations++;
-    return pre.id;
+    return { id: pre.id, arrival };
   }
 
   private findEncounter(tenantId: string, complaint: string) {

@@ -19,13 +19,19 @@ export function assertSeedTarget(env: NodeJS.ProcessEnv): void {
   for (const name of SEED_URL_VARS) {
     const raw = env[name];
     if (raw === undefined || raw === '') continue;
-    let host: string;
+    let url: URL;
     try {
-      host = new URL(raw).hostname;
+      url = new URL(raw);
     } catch {
       throw new SeedGuardError(`${name} no es una URL válida.`);
     }
-    if (!LOCAL_HOSTS.has(host)) {
+    // pg-connection-string prioriza ?host= (y libpq ?hostaddr=) sobre el host de la URL: también deben ser locales.
+    const hosts = [
+      url.hostname,
+      ...url.searchParams.getAll('host'),
+      ...url.searchParams.getAll('hostaddr'),
+    ];
+    if (hosts.some((h) => !LOCAL_HOSTS.has(h))) {
       throw new SeedGuardError(
         `${name} no apunta a localhost/127.0.0.1. Abortado: el seed solo se aplica en local salvo ALLOW_REMOTE_SEED=1 (paso manual del humano, docs/verification.md).`,
       );
