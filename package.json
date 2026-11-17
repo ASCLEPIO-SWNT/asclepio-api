@@ -26,7 +26,8 @@
     "prisma:generate": "prisma generate",
     "users:create": "npm run -s build && node dist/scripts/users-create.js",
     "sites:create": "npm run -s build && node dist/scripts/sites-create.js",
-    "ai:eval": "npm run -s build && node dist/scripts/ai-eval.js"
+    "ai:eval": "npm run -s build && node dist/scripts/ai-eval.js",
+    "db:seed": "npm run -s build && node dist/scripts/seed.js"
   },
   "jest": {
     "moduleFileExtensions": [
