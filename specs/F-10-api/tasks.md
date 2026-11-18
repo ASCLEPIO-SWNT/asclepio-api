@@ -27,4 +27,4 @@
 
   (R7, R8, R9, R10, R11)
 - [x] T6 Transversales: `R12:` matriz de tokens (personal → 403, sin token → 401) en los dos endpoints, con `problem+json`; logger capturado sin datos del paciente. (R12, R13)
-- [ ] T7 `npm run openapi:export`, `contract.version = 0.10.0` en `feature_list.json` y verificación de que `docs/architecture.md` lista el módulo `patient-queue`.
+- [x] T7 `npm run openapi:export`, `contract.version = 0.10.0` en `feature_list.json` y verificación de que `docs/architecture.md` lista el módulo `patient-queue`.

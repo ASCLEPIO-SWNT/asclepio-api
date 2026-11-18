@@ -1,9 +1,9 @@
 import {
   Controller,
   Get,
-  Headers,
   type MessageEvent,
   Query,
+  Req,
   Sse,
 } from '@nestjs/common';
 import {
@@ -12,6 +12,7 @@ import {
   ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { decodeJwt } from 'jose';
 import type { Observable } from 'rxjs';
 import { CurrentPrincipal, PatientOnly } from '../../common/auth/decorators.js';
@@ -73,13 +74,15 @@ export class PatientQueueController {
   @ApiProblemResponse(403, 'Token de personal.')
   stream(
     @CurrentPrincipal() principal: PatientPrincipal,
-    @Headers('authorization') authorization: string,
+    @Req() req: Request,
     // Solo para que ValidationPipe rechace cualquier parámetro (R13).
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Query() _q: PatientQueueQueryDto,
   ): Observable<MessageEvent> {
     // El guard ya verificó el token: aquí solo se lee su exp para cerrar el stream al vencer (R11).
-    const { exp } = decodeJwt(authorization.replace(/^Bearer /, ''));
+    const { exp } = decodeJwt(
+      (req.headers.authorization ?? '').replace(/^Bearer /, ''),
+    );
     return this.patientQueue.stream(principal, new Date((exp ?? 0) * 1000));
   }
 }
