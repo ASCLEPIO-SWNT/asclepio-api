@@ -11,6 +11,7 @@ import {
   PrismaService,
   type PrismaTx,
 } from '../../common/prisma/prisma.service.js';
+import { Observable, Subject } from 'rxjs';
 import { isUuid } from '../../common/uuid.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -109,6 +110,12 @@ export interface EncounterForReport {
   closedAt: Date | null;
 }
 
+/** Cambio en la cola de una sede (F-10-api, D3): sin ids de atención ni datos del paciente. */
+export interface EncounterChange {
+  tenantId: string;
+  siteId: string;
+}
+
 export interface NewEncounter {
   tenantId: string;
   siteId: string;
@@ -155,6 +162,15 @@ export function isUniqueViolation(e: unknown): boolean {
 @Injectable()
 export class EncountersService {
   private readonly logger = new Logger('encounters');
+  /** Cambios registrados por cada transacción abierta con inTransaction, pendientes de su commit. */
+  private readonly pending = new WeakMap<PrismaTx, EncounterChange[]>();
+  private readonly changes = new Subject<EncounterChange>();
+  /**
+   * Bus en memoria de cambios de la cola (F-10-api, D3, ADR 0009): crear una atención, clasificarla o cambiar su
+   * estado emite { tenantId, siteId } después del commit; un rollback no emite. `ponytail:` un solo proceso; con varias
+   * instancias, LISTEN/NOTIFY.
+   */
+  readonly changes$: Observable<EncounterChange> = this.changes.asObservable();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -165,6 +181,27 @@ export class EncountersService {
     private readonly tenancy: TenancyService,
     private readonly users: UsersService,
   ) {}
+
+  /**
+   * prisma.$transaction que, tras el commit, publica en changes$ lo que registraron createInTx, transition y
+   * recordTriage (F-10-api, R8). La usan todos los que abren la transacción de esas escrituras.
+   */
+  async inTransaction<T>(fn: (tx: PrismaTx) => Promise<T>): Promise<T> {
+    const changed: EncounterChange[] = [];
+    const result = await this.prisma.$transaction((tx) => {
+      this.pending.set(tx, changed);
+      return fn(tx);
+    });
+    const unique = new Map(
+      changed.map((c) => [`${c.tenantId}/${c.siteId}`, c]),
+    );
+    for (const c of unique.values()) this.changes.next(c);
+    return result;
+  }
+
+  private markChanged(tx: PrismaTx, change: EncounterChange): void {
+    this.pending.get(tx)?.push(change);
+  }
 
   hasActiveEncounter(
     tenantId: string,
@@ -235,6 +272,7 @@ export class EncountersService {
       },
       tx,
     );
+    this.markChanged(tx, { tenantId: n.tenantId, siteId: n.siteId });
     return id;
   }
 
@@ -253,7 +291,7 @@ export class EncountersService {
     const now = this.clock.now();
     let id: string;
     try {
-      id = await this.prisma.$transaction(async (tx) => {
+      id = await this.inTransaction(async (tx) => {
         const pending = await tx.preRegistration.count({
           where: {
             tenantId,
@@ -314,7 +352,7 @@ export class EncountersService {
     const current = isUuid(id)
       ? await tx.encounter.findFirst({
           where: { id, tenantId },
-          select: { status: true },
+          select: { status: true, siteId: true },
         })
       : null;
     if (!current) throw new NotFoundException(NOT_FOUND);
@@ -360,6 +398,7 @@ export class EncountersService {
       },
       tx,
     );
+    this.markChanged(tx, { tenantId, siteId: current.siteId });
     return { from, to };
   }
 
@@ -410,6 +449,11 @@ export class EncountersService {
       },
       tx,
     );
+    const { siteId } = await tx.encounter.findFirstOrThrow({
+      where: { id, tenantId },
+      select: { siteId: true },
+    });
+    this.markChanged(tx, { tenantId, siteId });
   }
 
   /**
@@ -470,7 +514,7 @@ export class EncountersService {
     id: string,
     reason: string,
   ): Promise<EncounterDto> {
-    const r = await this.prisma.$transaction((tx) =>
+    const r = await this.inTransaction((tx) =>
       this.transition(
         principal.tenantId,
         id,
@@ -511,7 +555,7 @@ export class EncountersService {
     id: string,
     to: 'IN_CARE' | 'CLOSED',
   ): Promise<EncounterDto> {
-    const r = await this.prisma.$transaction((tx) =>
+    const r = await this.inTransaction((tx) =>
       this.transition(
         principal.tenantId,
         id,

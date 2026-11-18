@@ -262,7 +262,8 @@ export class PreRegistrationsService {
     const now = this.clock.now();
     let result: { encounterId: string; identityVerified: boolean };
     try {
-      result = await this.prisma.$transaction(async (tx) => {
+      // inTransaction: la atención creada se publica en changes$ tras el commit (F-10-api, R8).
+      result = await this.encounters.inTransaction(async (tx) => {
         const pre = isUuid(id)
           ? await tx.preRegistration.findFirst({
               where: { id, tenantId },

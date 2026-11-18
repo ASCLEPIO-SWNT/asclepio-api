@@ -9,7 +9,7 @@
 
   (R2, R3, R4, R5)
 - [x] T2 Integración + `EncountersService.findActiveForPatient` y `countPhaseExits` (por sede, ventana, las dos fases). (R1, R3, R13)
-- [ ] T3 Integración + `changes$` en `EncountersService`, emitido tras el commit de crear, transicionar y clasificar. Una prueba comprueba que un rollback no emite. (R8)
+- [x] T3 Integración + `changes$` en `EncountersService`, emitido tras el commit de crear, transicionar y clasificar. Una prueba comprueba que un rollback no emite. (R8)
 - [ ] T4 Integración + `PatientQueueService.snapshot`, el controller `GET /patient/queue-position` y los DTOs:
   - `R1:` instantánea;
   - `R2:` dos pacientes `TRIAGED` de nivel III y uno nuevo de nivel II → la posición del III pasa de 1 a 2;
