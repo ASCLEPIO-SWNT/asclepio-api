@@ -1,10 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, type MessageEvent } from '@nestjs/common';
+import { defer, filter, finalize, map, type Observable, tap } from 'rxjs';
 import type { PatientPrincipal } from '../../common/auth/principal.js';
 import { Clock } from '../../common/clock/clock.js';
 import { EncountersService } from '../encounters/encounters.service.js';
 import { buildQueue } from '../queue/queue.rules.js';
 import type { QueuePositionDto } from './dto/patient-queue.dto.js';
 import { ESTIMATE, estimateWait, positionOf } from './estimate.rules.js';
+import {
+  PATIENT_QUEUE_TIMING,
+  positionStream,
+  type StreamTiming,
+} from './position-stream.js';
 
 /** Instantánea calculada y la atención con la que se calculó (para detectar DONE en el stream, D6). */
 export interface Computed {
@@ -33,6 +39,7 @@ export class PatientQueueService {
   constructor(
     private readonly encounters: EncountersService,
     private readonly clock: Clock,
+    @Inject(PATIENT_QUEUE_TIMING) private readonly timing: StreamTiming,
   ) {}
 
   /** GET /patient/queue-position (R1). */
@@ -44,6 +51,44 @@ export class PatientQueueService {
       phase: snapshot.phase,
     });
     return snapshot;
+  }
+
+  /**
+   * GET /patient/queue-position/stream (R7–R11, D3): instantánea inicial, recálculo ante cambios de la sede de la
+   * atención (o de cualquier sede del tenant mientras no haya atención) y cada 15 s; cierra en DONE o al vencer el
+   * token (`tokenExpiresAt`, del token ya verificado por el guard).
+   */
+  stream(
+    principal: PatientPrincipal,
+    tokenExpiresAt: Date,
+  ): Observable<MessageEvent> {
+    return defer(() => {
+      // Atención con la que se abrió el stream (o la primera que aparezca) y su sede (D6).
+      let tracked: string | null = null;
+      let site: string | null = null;
+      const log = (msg: string) =>
+        this.logger.log({ msg, tenantId: principal.tenantId });
+      log('patient_queue_stream_opened');
+      return positionStream({
+        compute: () =>
+          defer(() => this.compute(principal, tracked)).pipe(
+            tap((c) => {
+              tracked ??= c.encounterId;
+              site = c.siteId ?? site;
+            }),
+            map((c) => c.snapshot),
+          ),
+        changes$: this.encounters.changes$.pipe(
+          filter(
+            (c) =>
+              c.tenantId === principal.tenantId &&
+              (site === null || c.siteId === site),
+          ),
+        ),
+        closeAfterMs: tokenExpiresAt.getTime() - this.clock.now().getTime(),
+        timing: this.timing,
+      }).pipe(finalize(() => log('patient_queue_stream_closed')));
+    });
   }
 
   /**

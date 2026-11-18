@@ -18,7 +18,7 @@
   - `R13:` parámetro extra → 400.
 
   (R1, R2, R5, R6, R13)
-- [ ] T5 e2e + `@Sse()` `GET /patient/queue-position/stream` según D3:
+- [x] T5 e2e + `@Sse()` `GET /patient/queue-position/stream` según D3:
   - `R7:` evento inicial;
   - `R8:` emite en ≤2 s tras una transición en la misma sede y no emite por otra sede;
   - `R9:` latido con el scheduler de prueba;
