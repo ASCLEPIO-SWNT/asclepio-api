@@ -8,7 +8,7 @@
   - `estimateWait` (4 salidas → `INSUFFICIENT_DATA`, 5 → rango, redondeo, mínimo 5).
 
   (R2, R3, R4, R5)
-- [ ] T2 Integración + `EncountersService.findActiveForPatient` y `countPhaseExits` (por sede, ventana, las dos fases). (R1, R3, R13)
+- [x] T2 Integración + `EncountersService.findActiveForPatient` y `countPhaseExits` (por sede, ventana, las dos fases). (R1, R3, R13)
 - [ ] T3 Integración + `changes$` en `EncountersService`, emitido tras el commit de crear, transicionar y clasificar. Una prueba comprueba que un rollback no emite. (R8)
 - [ ] T4 Integración + `PatientQueueService.snapshot`, el controller `GET /patient/queue-position` y los DTOs:
   - `R1:` instantánea;

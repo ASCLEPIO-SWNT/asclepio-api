@@ -623,6 +623,49 @@ export class EncountersService {
     });
   }
 
+  /**
+   * Atención activa del paciente (F-10-api, R1, R13): solo por el tenant y el patientId del token, en WAITING_TRIAGE,
+   * TRIAGED o IN_CARE (el índice único parcial garantiza que hay a lo sumo una). Sin datos del paciente ni motivo.
+   */
+  async findActiveForPatient(
+    tenantId: string,
+    patientId: string,
+  ): Promise<{ id: string; siteId: string; status: EncounterStatus } | null> {
+    if (!isUuid(patientId)) return null;
+    return this.prisma.encounter.findFirst({
+      where: { tenantId, patientId, status: { in: QUEUE_STATUSES } },
+      select: { id: true, siteId: true, status: true },
+    });
+  }
+
+  /**
+   * Salidas de una fase en la sede y en [since, until] (F-10-api, R3): para WAITING_TRIAGE, atenciones con triaged_at
+   * en la ventana; para WAITING_CARE, eventos STATUS_CHANGED a IN_CARE con occurred_at en la ventana. Solo recuentos.
+   */
+  countPhaseExits(
+    tenantId: string,
+    siteId: string,
+    phase: 'WAITING_TRIAGE' | 'WAITING_CARE',
+    since: Date,
+    until: Date,
+  ): Promise<number> {
+    const window = { gte: since, lte: until };
+    if (phase === 'WAITING_TRIAGE') {
+      return this.prisma.encounter.count({
+        where: { tenantId, siteId, triagedAt: window },
+      });
+    }
+    return this.prisma.encounterEvent.count({
+      where: {
+        tenantId,
+        type: 'STATUS_CHANGED',
+        toStatus: 'IN_CARE',
+        occurredAt: window,
+        encounter: { siteId },
+      },
+    });
+  }
+
   /** GET /encounters (R43): filtros, orden arrival_at DESC, id DESC y paginación limit/offset. */
   /**
    * Población de los reportes (F-07-api, D2, R3, R4, R17): atenciones del tenant (y de la sede, si llega) con arrival_at
