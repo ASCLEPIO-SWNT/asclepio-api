@@ -2,7 +2,7 @@
 
 > **Orden estricto.** Primero la prueba `R<n>: …` y luego el código. **No hay migraciones.** Nada se ejecuta contra Supabase.
 
-- [ ] T1 Prueba unitaria + `modules/patient-queue/estimate.rules.ts` (puro):
+- [x] T1 Prueba unitaria + `modules/patient-queue/estimate.rules.ts` (puro):
   - `ESTIMATE` con el comentario PA-F10-1;
   - `positionOf` (fases, posición 1, ausente → `NO_ACTIVE`);
   - `estimateWait` (4 salidas → `INSUFFICIENT_DATA`, 5 → rango, redondeo, mínimo 5).
