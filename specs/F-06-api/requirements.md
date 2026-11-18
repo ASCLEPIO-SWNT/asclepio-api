@@ -15,10 +15,13 @@ Glosario de la spec:
   - nivel II → **30 min**;
   - niveles III, IV y V → **sin tiempo máximo** (`null`): la norma los deja a cada IPS y el MVP no alerta sobre ellos.
 - **Atención vencida** (`overdue`): una atención `TRIAGED` de nivel I con espera mayor que 0, o de nivel II con espera mayor que 30. En cualquier otro caso, `overdue = false`.
+  - Modificado por DT-02-api (2026-11-11): desde `triaged_at`, tiempo exacto (`serverNow − triaged_at > máximo · 60 000` ms; specs/DT-02-api/, R2–R3).
 - **Secciones de la cola** (atenciones activas del alcance):
   - `waitingTriage`: estado `WAITING_TRIAGE`, ordenadas por mayor espera primero;
   - `triaged`: estado `TRIAGED`, ordenadas por `final_level` ascendente y, dentro de cada nivel, por mayor espera primero;
   - `inCare`: estado `IN_CARE`, ordenadas por `final_level` ascendente y después por `arrival_at` ascendente.
+
+  Modificado por DT-02-api (2026-11-11): desde `triaged_at`, tiempo exacto: dentro de cada nivel, `triaged` va por mayor `minutesSinceTriage` (specs/DT-02-api/, R5).
 
   Los empates se resuelven por `id` ascendente. `REGISTERED` es transitorio (F-02 crea la atención directamente en `WAITING_TRIAGE`) y no aparece.
 - **Alcance** (PA-F06-4): el tenant del token y, si llega `siteId`, solo esa sede.
@@ -33,9 +36,11 @@ Glosario de la spec:
 ### Cola
 
 - **R1** (Por evento) Cuando se reciba `GET /api/v1/queue` con un token de un rol de la cola, el sistema deberá responder 200 con `{ serverNow, waitingTriage, triaged, inCare }`, con las atenciones activas del alcance repartidas y ordenadas según las secciones de la cola. (→ F-06.AC1, F-06.AC2)
+  - Modificado por DT-02-api (2026-11-11): desde `triaged_at`, tiempo exacto: el orden de `triaged` dentro de cada nivel es por mayor `minutesSinceTriage` (specs/DT-02-api/, R5).
 - **R2** (Ubicuo) El sistema deberá representar cada elemento de la cola con `encounterId`, `siteId`, `siteName`, `status`, `finalLevel` (`null` en `waitingTriage`), `arrivalAt`, `waitMinutes` (`null` en `inCare`), `maxWaitMinutes` (según el nivel; `null` sin nivel o en III–V), `overdue` y `patient: { initials, ageYears, sex }`. (→ F-06.AC1, F-06.AC3, F-06.AC5)
 - **R3** (Ubicuo) El sistema deberá calcular `waitMinutes` y `overdue` en el servidor con un único `serverNow` por petición, devuelto en la respuesta, e ignorar cualquier hora que envíe el cliente. (→ F-06.AC1) (decidido en PA-F06-2; RNF-10)
 - **R4** (Ubicuo) El sistema deberá marcar `overdue = true` solo en las atenciones `TRIAGED` de nivel I con espera mayor que 0 o de nivel II con espera mayor que 30, y `maxWaitMinutes` = 0, 30 o `null` según el nivel. Los tiempos máximos deberán vivir en una única definición en código, con la referencia a la Res. 5596 de 2015. (→ F-06.AC3) (decidido en PA-F06-1, opción (a))
+  - Modificado por DT-02-api (2026-11-11): desde `triaged_at`, tiempo exacto: `overdue` compara `serverNow − triaged_at` en milisegundos con el máximo (specs/DT-02-api/, R2–R4).
 - **R5** (Por evento) Cuando la petición incluya `siteId` con un UUID de una sede del tenant del token, el sistema deberá limitar la cola a las atenciones de esa sede. (→ F-06.AC1) (decidido en PA-F06-4)
 - **R6** (No deseado) Si `siteId` no es un UUID, entonces el sistema deberá responder 400. Si es un UUID de una sede inexistente o de otro tenant, deberá responder 200 con las tres secciones vacías, sin revelar si la sede existe en otro tenant. Si llega cualquier otro parámetro de consulta, deberá responder 400. (→ F-06.AC1)
 - **R7** (Ubicuo) El sistema deberá excluir de la respuesta de la cola el nombre completo, el tipo y el número de documento, la fecha de nacimiento, el id del paciente y el motivo de consulta. Solo deberá incluir los datos del paciente de la cola. (→ F-06.AC5) (decidido en PA-F06-5)
@@ -60,6 +65,7 @@ Glosario de la spec:
 
 - [x] **PA-F06-1** Tiempos máximos por nivel. → Humano, 2026-11-09: opción **(a)**: alertar solo los niveles fijados por la Res. 5596 de 2015, que son I (inmediato, 0 min) y II (30 min). III, IV y V sin tiempo máximo ni alerta en el MVP. Cubierto por R4.
 - [x] **PA-F06-2** Definición de espera. → Humano, 2026-11-09: desde `arrival_at` (llegada legal) hasta que la atención pasa a `IN_CARE`. Cubierto por R2 y R3.
+  - Modificado por DT-02-api (2026-11-11): desde `triaged_at`, tiempo exacto: la espera sigue desde la llegada; el tiempo máximo, la alerta y el orden de `triaged` se cuentan desde la clasificación (specs/DT-02-api/).
 - [x] **PA-F06-3** Intervalo de refresco. → Humano, 2026-11-09: 30 s. Es responsabilidad de F-06-web (F-06.AC4); la API solo devuelve `serverNow`.
 - [x] **PA-F06-4** ¿Cola por sede o por tenant? → Humano, 2026-11-09: por sede con filtro (`siteId` opcional, como la bandeja de recepción). Cubierto por R5 y R6.
 - [x] **PA-F06-5** ¿Qué datos del paciente se muestran? → Humano, 2026-11-09: iniciales, edad y sexo, sin documento. Cubierto por R2 y R7.

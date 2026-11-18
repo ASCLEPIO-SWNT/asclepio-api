@@ -51,8 +51,10 @@ Versión: **0.6.0 → 0.7.0** (menor: tres operaciones nuevas).
 
 **Riesgos:**
 - (1) **Espera desde la llegada** (PA-F06-2): para el nivel II, la Res. 5596 habla de atención en 30 min tras el triage. Medir desde la llegada es más estricto y adelanta la alerta. Es una decisión del humano.
+  - Modificado por DT-02-api (2026-11-11): desde `triaged_at`, tiempo exacto: la alerta y el orden de `triaged` se miden desde la clasificación (Res. 256 de 2016; specs/DT-02-api/).
 - (2) Sin paginación (techo de D2).
 - (3) El nivel I aparece como vencido en cuanto pasa 1 minuto en `TRIAGED`, como corresponde a "inmediato".
+  - Modificado por DT-02-api (2026-11-11): desde `triaged_at`, tiempo exacto: el nivel I vence en cuanto pasa cualquier tiempo desde la clasificación (specs/DT-02-api/, R3).
 
 **Pruebas unitarias** (`queue.rules.ts`, sin base):
 - `waitMinutes` en 59 s → 0, 60 s → 1 y con milisegundos.

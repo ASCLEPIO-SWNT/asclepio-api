@@ -17,7 +17,7 @@ export class QueueController {
   @ApiOperation({
     summary: 'Cola priorizada por nivel y espera',
     description:
-      'Atenciones activas del tenant (o de la sede siteId) en tres secciones: waitingTriage, triaged e inCare. La espera se mide desde la llegada (arrivalAt) hasta serverNow, con el reloj del servidor. Tiempos máximos de la Res. 5596 de 2015: nivel I = 0 min (inmediato) y nivel II = 30 min; III, IV y V sin tiempo máximo ni alerta (PA-F06-1). overdue solo en triaged. Del paciente solo se devuelven iniciales, edad y sexo.',
+      'Atenciones activas del tenant (o de la sede siteId) en tres secciones: waitingTriage, triaged e inCare, con el reloj del servidor (serverNow). La espera (waitMinutes) se mide desde la llegada (arrivalAt) y ordena waitingTriage. El tiempo máximo, la alerta y el orden de triaged se cuentan desde la clasificación (triagedAt), como la Res. 256 de 2016: triaged va por nivel y, en cada nivel, por mayor minutesSinceTriage. Tiempos máximos de la Res. 5596 de 2015: nivel I = 0 min (inmediato) y nivel II = 30 min; III, IV y V sin tiempo máximo ni alerta (PA-F06-1). overdue solo en triaged, con el tiempo exacto desde la clasificación (nivel I vencido en cuanto pasa cualquier tiempo; nivel II, con más de 30 min). Del paciente solo se devuelven iniciales, edad y sexo.',
   })
   @ApiOkResponse({ type: QueueDto })
   @ApiProblemResponse(

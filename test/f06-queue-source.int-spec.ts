@@ -106,6 +106,7 @@ describe('F-06: listActiveForQueue (integración)', () => {
       'siteId',
       'siteName',
       'status',
+      'triagedAt',
     ]);
     expect(Object.keys(triaged.patient).sort()).toEqual([
       'birthDate',
@@ -126,5 +127,9 @@ describe('F-06: listActiveForQueue (integración)', () => {
       },
     });
     expect(triaged.arrivalAt).toBeInstanceOf(Date);
+    // DT-02-api (R1): la cola lee también triaged_at para la alerta y el orden de triaged.
+    expect(triaged.triagedAt).toBeInstanceOf(Date);
+    const waiting = rows.find((r) => r.id === byStatus.get('WAITING_TRIAGE'))!;
+    expect(waiting.triagedAt).toBeNull();
   });
 });

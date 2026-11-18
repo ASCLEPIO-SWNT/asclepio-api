@@ -9,6 +9,7 @@ import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { EncountersModule } from './modules/encounters/encounters.module.js';
 import { QueueModule } from './modules/queue/queue.module.js';
+import { ReportsModule } from './modules/reports/reports.module.js';
 import { PatientsHttpModule } from './modules/patients/patients.module.js';
 import { TenancyHttpModule } from './modules/tenancy/tenancy.module.js';
 import { TriageModule } from './modules/triage/triage.module.js';
@@ -30,6 +31,7 @@ import { UsersModule } from './modules/users/users.module.js';
     AiModule,
     TriageModule,
     QueueModule,
+    ReportsModule,
   ],
   controllers: [HealthController],
 })

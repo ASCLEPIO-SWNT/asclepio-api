@@ -8,9 +8,10 @@ import type { EncounterStatus } from '../encounters/encounter-state-machine.js';
  */
 
 /**
- * Tiempo máximo de espera por nivel de triage, en minutos (única definición, R4).
- * Res. 5596 de 2015: I inmediato, II 30 min; III–V sin tiempo máximo en el MVP (PA-F06-1, opción (a), humano,
- * 2026-11-09). La norma deja III–V a cada IPS: no se inventan valores.
+ * Tiempo máximo por nivel de triage, en minutos (única definición, R4 de F-06; R11 de DT-02-api, también la usa el
+ * cumplimiento de reports). Valores de la Res. 5596 de 2015: I inmediato, II 30 min; III–V sin tiempo máximo en el MVP
+ * (PA-F06-1, opción (a), humano, 2026-11-09). La norma deja III–V a cada IPS: no se inventan valores.
+ * Se cuentan desde la clasificación (`triaged_at`) con el tiempo exacto, como la Res. 256 de 2016 (DT-02-api, D3).
  */
 export const MAX_WAIT_MINUTES_BY_LEVEL: Readonly<Record<number, number>> =
   Object.freeze({ 1: 0, 2: 30 });
@@ -25,6 +26,8 @@ export interface QueueRow {
   status: EncounterStatus;
   finalLevel: number | null;
   arrivalAt: Date;
+  /** Hora de la decisión de triage; null fuera de TRIAGED/IN_CARE (o por una escritura fuera de la API, R8). */
+  triagedAt: Date | null;
   patient: {
     fullName: string | null;
     /** Fecha civil YYYY-MM-DD. */
@@ -49,6 +52,7 @@ export interface QueueItem {
   finalLevel: number | null;
   arrivalAt: string;
   waitMinutes: number | null;
+  minutesSinceTriage: number | null;
   maxWaitMinutes: number | null;
   overdue: boolean;
   patient: QueuePatient;
@@ -66,15 +70,26 @@ export function waitMinutes(arrivalAt: Date, now: Date): number {
   return Math.floor((now.getTime() - arrivalAt.getTime()) / 60_000);
 }
 
+/**
+ * Minutos enteros completos desde la clasificación hasta `now` (DT-02-api, R1). La misma fórmula que waitMinutes;
+ * solo se muestra y ordena triaged, no decide la alerta (D3).
+ */
+export function minutesSinceTriage(triagedAt: Date, now: Date): number {
+  return waitMinutes(triagedAt, now);
+}
+
 /** Tiempo máximo del nivel; null sin nivel o en III–V (R4). */
 export function maxWaitMinutes(level: number | null): number | null {
   return level === null ? null : (MAX_WAIT_MINUTES_BY_LEVEL[level] ?? null);
 }
 
-/** true si la espera supera el tiempo máximo del nivel (I > 0, II > 30); nunca en III–V ni sin nivel (R4). */
-export function isOverdue(level: number | null, wait: number): boolean {
+/**
+ * true si el tiempo exacto desde la clasificación, en milisegundos, supera el máximo del nivel (I > 0 ms,
+ * II > 30 min); nunca en III–V ni sin nivel (DT-02-api, R2–R3, D3).
+ */
+export function isOverdue(level: number | null, elapsedMs: number): boolean {
   const max = maxWaitMinutes(level);
-  return max !== null && wait > max;
+  return max !== null && elapsedMs > max * 60_000;
 }
 
 function firstLetter(word: string): string {
@@ -96,6 +111,8 @@ function toItem(r: QueueRow, now: Date, today: string): QueueItem {
   const triaged = r.status === 'TRIAGED';
   const level = waiting ? null : r.finalLevel;
   const wait = r.status === 'IN_CARE' ? null : waitMinutes(r.arrivalAt, now);
+  // Desde la clasificación solo en TRIAGED y con triaged_at (R1, R8 de DT-02-api); el mismo now (R9).
+  const triagedAt = triaged ? r.triagedAt : null;
   const p = r.patient;
   return {
     encounterId: r.id,
@@ -105,8 +122,11 @@ function toItem(r: QueueRow, now: Date, today: string): QueueItem {
     finalLevel: level,
     arrivalAt: r.arrivalAt.toISOString(),
     waitMinutes: wait,
+    minutesSinceTriage: triagedAt ? minutesSinceTriage(triagedAt, now) : null,
     maxWaitMinutes: maxWaitMinutes(level),
-    overdue: triaged && wait !== null && isOverdue(level, wait),
+    overdue:
+      triagedAt !== null &&
+      isOverdue(level, now.getTime() - triagedAt.getTime()),
     patient: {
       initials: initials(p.fullName),
       ageYears: p.birthDate
@@ -123,12 +143,20 @@ const byLevel = (a: QueueItem, b: QueueItem) =>
   (a.finalLevel ?? 6) - (b.finalLevel ?? 6);
 const byWaitDesc = (a: QueueItem, b: QueueItem) =>
   (b.waitMinutes ?? 0) - (a.waitMinutes ?? 0);
+/** Sin minutesSinceTriage (TRIAGED sin triaged_at, R8 de DT-02-api) al final de triaged. */
+const byClassifiedFirst = (a: QueueItem, b: QueueItem) =>
+  Number(a.minutesSinceTriage === null) - Number(b.minutesSinceTriage === null);
+/** Más tiempo desde la clasificación primero (R5 de DT-02-api, PA-DT02-1 opción (b)); nulos al final. */
+const byMinutesSinceTriageDesc = (a: QueueItem, b: QueueItem) =>
+  (b.minutesSinceTriage ?? -1) - (a.minutesSinceTriage ?? -1);
 const byArrival = (a: QueueItem, b: QueueItem) =>
   Date.parse(a.arrivalAt) - Date.parse(b.arrivalAt);
 
 /**
- * Las tres secciones de la cola (R1, R8): waitingTriage por mayor espera; triaged por nivel ascendente y mayor espera;
- * inCare por nivel ascendente y llegada ascendente. Empates por id. REGISTERED, CLOSED y CANCELLED no aparecen.
+ * Las tres secciones de la cola (R1, R8 de F-06): waitingTriage por mayor espera desde la llegada; triaged por nivel
+ * ascendente y más tiempo desde la clasificación (R5 de DT-02-api), con las que no tienen triaged_at al final (R8 de
+ * DT-02-api); inCare por nivel ascendente y llegada ascendente. Empates por id. REGISTERED, CLOSED y CANCELLED no
+ * aparecen.
  */
 export function buildQueue(rows: QueueRow[], now: Date): Queue {
   const today = bogotaDate(now);
@@ -149,7 +177,12 @@ export function buildQueue(rows: QueueRow[], now: Date): Queue {
   return {
     serverNow: now.toISOString(),
     waitingTriage: section('WAITING_TRIAGE', byWaitDesc),
-    triaged: section('TRIAGED', byLevel, byWaitDesc),
+    triaged: section(
+      'TRIAGED',
+      byClassifiedFirst,
+      byLevel,
+      byMinutesSinceTriageDesc,
+    ),
     inCare: section('IN_CARE', byLevel, byArrival),
   };
 }

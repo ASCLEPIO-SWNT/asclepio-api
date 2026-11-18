@@ -49,6 +49,8 @@ Regla entre repos: **primero el contrato**. `F-0X-web` y `F-0X-mobile` no pasan 
 | F-04-api | done (2026-11-09) | 0.5.0 |
 | F-05-api | done (2026-11-09) | 0.6.0 |
 | F-06-api | done (2026-11-09) | 0.7.0 |
+| F-07-api | done (2026-11-10) | 0.8.0 |
+| DT-02-api | done (2026-11-11) | 0.9.0 (cola: alerta y orden desde la clasificación, Res. 256 de 2016) |
 | Todos los demás | pending | — |
 
 ## Trazabilidad F-0X.ACn → R<n>
@@ -86,6 +88,11 @@ Cada spec (`specs/<id>/requirements.md`) traza sus `R<n>` a los criterios global
 | F-06.AC2 | F-06-api | R1 | ídem |
 | F-06.AC3 | F-06-api | R2, R4 | ídem |
 | F-06.AC5 | F-06-api | R2, R7, R15 | ídem |
+| F-07.AC1 | F-07-api | R1–R7, R10, R16, R17 | `R<n>:` en `src/modules/reports/*.spec.ts`, `test/f07-*` |
+| F-07.AC2 | F-07-api | R5, R8, R10 | ídem |
+| F-07.AC3 | F-07-api | R5, R9, R10 | ídem |
+| F-07.AC4 | F-07-api | R11–R16, R19 | ídem |
+| F-07.AC5 | F-07-api | R18 | ídem |
 
 ## Alcance del móvil (ratificado 2026-11-09)
 La app móvil es **solo del paciente** (ADR 0008, ratificado por el humano el 2026-11-09). Las funciones de personal añadidas en `asclepio-mobile` el 2026-10-29 (ADR local 0002) se retiran en un slice de limpieza del móvil. F-03 a F-07 no tienen slice móvil.
@@ -104,7 +111,7 @@ No se implementa nada que dependa de estas preguntas hasta que se respondan. El 
 | ~~PA-F04-1..7~~ | Resueltas el 2026-11-09 (spec de F-04-api): SafetyGuards sobre NEWS2 RCP 2017 con G1 (≥ 7 → máx. II), G2 (5–6 → máx. III) y G3 (parámetro = 3 → máx. III), **PROVISIONALES, no validados clínicamente — revisar con asesor clínico**; `openai/gpt-oss-120b` en Groq y OpenRouter; 8 s por llamada, 1 reintento (OpenRouter) y 20 s en total; botón explícito; re-sugerencia en `WAITING_TRIAGE` (se muestra la más reciente); 20 viñetas en borrador sin subclasificar I–II; saneamiento de nombre y documento | — |
 | ~~PA-F05-1..3~~ | Resueltas el 2026-11-09 (spec de F-05-api): sin re-triage (409); motivo de corrección en texto libre de 1 a 500 caracteres; `VALIDATE` usa el nivel ya ajustado por el guard | — |
 | ~~PA-F06-1..5~~ | Resueltas el 2026-11-09 (spec de F-06-api): solo I (0 min) y II (30 min) de la Res. 5596, III–V sin alerta; espera desde la llegada hasta `IN_CARE`; refresco de 30 s; cola por sede con filtro; iniciales, edad y sexo | — |
-| PA-F07-1..4 | **Formato oficial Res. 373 / SISPRO**, tipo de kappa, métricas, documento en el CSV | F-07 |
+| ~~PA-F07-1..4~~ | Resueltas el 2026-11-10 (spec de F-07-api): CSV interno (no oficial), kappa ponderado cuadrático, n/mediana/p90, sin documento; cumplimiento del Triage II según la Res. 256 de 2016 (desde la clasificación) | — |
 | PA-F08-1..2 | Texto editado tras el dictado, dispositivos objetivo | F-08 |
 | PA-F09-1 | Volumen de los datos de demo | F-09 |
 | ~~PA-ADR3~~ | Resuelta el 2026-10-26: solo el responsable de backend ejecuta `migrate deploy` en la base compartida y avisa al equipo | — |
