@@ -113,12 +113,19 @@ export const RED_FLAG_PATTERNS: Readonly<Record<RedFlag, readonly string[]>> =
       '\\bvomit\\w*\\s+(con\\s+)?sangre\\b',
     ],
     STROKE_SIGNS: [
-      '\\b(cara|boca)\\s+(torcid|chuec|caid)\\w*',
-      '\\btorci\\w*\\s+(la\\s+)?(cara|boca)\\b',
-      '\\b(debilidad|adormec\\w*|hormigueo|no siento|paraliz\\w*)[^.,;]{0,30}\\b(un lado|medio cuerpo|mitad del cuerpo|lado (derecho|izquierdo))\\b',
+      // Cara o boca torcida, chueca o caída (también con palabras en medio: "la boca se me ve chueca").
+      '\\b(cara|boca)\\b[^.,;]{0,20}\\b(torcid|chuec|caid|cayo)\\w*',
+      '\\b(torci|cayo)\\w*\\s+(la\\s+)?(cara|boca)\\b',
+      // Debilidad, adormecimiento u hormigueo de un lado: estado → lado/extremidad con lateralidad.
+      '\\b(debil\\w*|durm\\w*|duerm\\w*|dormid\\w*|adormec\\w*|entumi\\w*|hormigueo|no siento|paraliz\\w*|no (puedo|puede|podia) mover)\\b[^.,;]{0,40}\\b(un lado|medio cuerpo|mitad del cuerpo|mitad de la cara|media cara|lado (derecho|izquierdo)|(brazo|pierna|mano|pie)s? (derech|izquierd)\\w*)',
+      // Extremidad con lateralidad → estado ("la mano derecha entumida").
+      '\\b(brazo|pierna|mano|pie)s? (derech|izquierd)\\w*[^.,;]{0,20}\\b(debil\\w*|dormid\\w*|adormec\\w*|entumi\\w*|paraliz\\w*)',
       '\\bno (puedo|puede|podia) mover (el|la|mi|su)\\s+(brazo|pierna|mano|cara)\\b',
-      '\\b(dificultad para|no puedo|no puede|me cuesta|le cuesta)\\s+hablar\\b',
+      // Dificultad para hablar.
+      '\\b(dificultad para|no puedo|no puede|no podia|me cuesta|le cuesta)\\s+hablar\\b',
       '\\bhabl\\w*\\s+(enredad|arrastrad|rar|trabad)\\w*',
+      '\\btrab\\w*\\s+la\\s+lengua\\b',
+      '\\blengua\\s+trabad\\w*',
     ],
     SUICIDAL_IDEATION: [
       '\\bsuicid\\w*',

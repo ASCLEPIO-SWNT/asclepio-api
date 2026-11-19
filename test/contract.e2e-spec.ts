@@ -121,7 +121,7 @@ describe('Contrato OpenAPI 0.11.x (e2e, sin base)', () => {
     expect(cc?.responses['200']).toBeDefined();
   });
 
-  it('R1: info.version es 0.10.0 (F-04 publicó 0.5.0) y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
+  it('R1: info.version es 0.11.0 (F-04 publicó 0.5.0) y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
     const doc = buildOpenApiDocument(app);
     expect(doc.info.version).toBe('0.11.0');
     const path = doc.paths['/api/v1/encounters/{id}/triage-suggestions'];
@@ -387,7 +387,7 @@ describe('Contrato OpenAPI 0.11.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- F-05-api (0.6.0)
 
-  it('R16: info.version es 0.10.0 (F-05 publicó 0.6.0) y POST/GET /encounters/{id}/triage-decision declaran bearer, TriageDecisionDto y problem+json', () => {
+  it('R16: info.version es 0.11.0 (F-05 publicó 0.6.0) y POST/GET /encounters/{id}/triage-decision declaran bearer, TriageDecisionDto y problem+json', () => {
     const doc = buildOpenApiDocument(app);
     expect(doc.info.version).toBe('0.11.0');
     const path = doc.paths['/api/v1/encounters/{id}/triage-decision'];
@@ -559,7 +559,7 @@ describe('Contrato OpenAPI 0.11.x (e2e, sin base)', () => {
     content: { 'application/problem+json': expect.any(Object) as object },
   };
 
-  it('R1: info.version es 0.10.0 y GET /queue declara bearer, QueueDto, siteId opcional y los tiempos máximos de la Res. 5596', () => {
+  it('R1: info.version es 0.11.0 y GET /queue declara bearer, QueueDto, siteId opcional y los tiempos máximos de la Res. 5596', () => {
     const doc = buildOpenApiDocument(app);
     expect(doc.info.version).toBe('0.11.0');
     const op = doc.paths['/api/v1/queue'].get;
@@ -700,7 +700,7 @@ describe('Contrato OpenAPI 0.11.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- F-07-api (0.8.0)
 
-  it('R5: info.version es 0.10.0 (F-07 publicó 0.8.0) y GET /reports/summary declara bearer, ReportSummaryDto, from y to obligatorios y siteId opcional', () => {
+  it('R5: info.version es 0.11.0 (F-07 publicó 0.8.0) y GET /reports/summary declara bearer, ReportSummaryDto, from y to obligatorios y siteId opcional', () => {
     const doc = buildOpenApiDocument(app);
     expect(doc.info.version).toBe('0.11.0');
     const op = doc.paths['/api/v1/reports/summary'].get;
@@ -808,7 +808,7 @@ describe('Contrato OpenAPI 0.11.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- DT-02-api (0.9.0)
 
-  it('R10: info.version es 0.10.0 y QueueItemDto.minutesSinceTriage es integer, nullable y requerido', () => {
+  it('R10: info.version es 0.11.0 y QueueItemDto.minutesSinceTriage es integer, nullable y requerido', () => {
     const doc = buildOpenApiDocument(app);
     expect(doc.info.version).toBe('0.11.0');
     const item = schemaOf(doc, 'QueueItemDto');
@@ -871,7 +871,7 @@ describe('Contrato OpenAPI 0.11.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- F-10-api (0.10.0)
 
-  it('R1: info.version es 0.10.0 y GET /patient/queue-position declara bearer, QueuePositionDto, ningún parámetro y 400/401/403 problem+json', () => {
+  it('R1: info.version es 0.11.0 y GET /patient/queue-position declara bearer, QueuePositionDto, ningún parámetro y 400/401/403 problem+json', () => {
     const doc = buildOpenApiDocument(app);
     expect(doc.info.version).toBe('0.11.0');
     const op = doc.paths['/api/v1/patient/queue-position'].get;

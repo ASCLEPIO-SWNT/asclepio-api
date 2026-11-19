@@ -3,7 +3,7 @@
 - **Rama:** `feature/F-11-api` (desde `develop`), sin push. Commits `c7f6830`…`4211203` (uno por tarea, T1–T11).
 - **Contrato:** `info.version` **0.11.0** (`API_CONTRACT_VERSION`, snapshot regenerado; `npm run openapi:export` no deja diff). `feature_list.json` ya tenía `contract.version = "0.11.0"`; estado sigue `in_progress`.
 - **Migración (una):** `prisma/migrations/20261119022808_f11_symptom_interview/` creada con `prisma migrate dev --create-only` contra el Docker local (127.0.0.1:54329, URLs explícitas; ni `.env` ni Supabase). Solo `ADD COLUMN` + CHECK; sin grants nuevos (f02 ya da `SELECT, INSERT, UPDATE` a nivel de tabla). Aplicada **solo** en el Docker local por `scripts/test-int.sh` (`migrate deploy` local); `prisma migrate diff --from-config-datasource --to-schema` contra el Docker → "No difference detected". **El `migrate deploy` en Supabase lo ejecuta el humano.**
-- **Fixture compartido:** `test/fixtures/red-flag-cases.json`, 47 casos (cada `RedFlag` ≥ 2 positivos, sutiles, 2 multi-señal y 10 negativos). **SHA-256 `343dd9c6231acaf3bee3122b49fdc974174c5899be42c0c8c7684ddd7b7f22cd`** (fijado en `interview.rules.spec.ts`; F-11-mobile debe copiar el archivo literalmente y fijar el mismo hash). No se escribió nada en `../asclepio-mobile`.
+- **Fixture compartido:** `test/fixtures/red-flag-cases.json`, 62 casos (cada `RedFlag` ≥ 2 positivos, sutiles, 2 multi-señal y 13 negativos; `STROKE_SIGNS` ampliado tras la revisión). **SHA-256 `2d75bdbd0ba08e8e1c9d29ccc40c94ab8c9ca003c34ee8c642409c4da83fe6b7`** (fijado en `interview.rules.spec.ts`; F-11-mobile debe copiar el archivo literalmente y fijar el mismo hash). No se escribió nada en `../asclepio-mobile`.
 - **T10:** código y datos hechos; **`npm run ai:eval` NO se ejecutó** (llama al LLM real) → **ejecución manual pendiente por el humano**.
 
 ## Archivos tocados
@@ -30,7 +30,7 @@
 | R1 | `test/f11-pre-registrations.int-spec.ts` :: `R1: guarda la entrevista en symptom_interview y sus redFlags en red_flags`; `R1: la respuesta del paciente no cambia…` · `pre-registration-interview.dto.spec.ts` :: `R1: una entrevista bien formada pasa…` · `contract.e2e-spec.ts` :: `R1: CreatePreRegistrationDto añade interview opcional…` |
 | R2 | `pre-registration-interview.dto.spec.ts` :: `R2: %s → 400 con el campo, sin repetir el valor enviado` (20 casos) · `f11-pre-registrations.int-spec.ts` :: `R2: una entrevista mal formada → 400 problem+json, sin crear el pre-registro ni repetir los valores` |
 | R3 | `pre-registration-interview.dto.spec.ts` :: `R3: sin interview el cuerpo de 0.10.0 sigue siendo válido` · `f11-pre-registrations.int-spec.ts` :: `R3: sin interview se crea como en 0.10.0…` |
-| R4 | `interview.rules.spec.ts` :: `R4: detectRedFlags(%j) → %j` (47 casos del fixture), `R4: el hash SHA-256…`, `R4: cada RedFlag tiene al menos dos casos…` · `f11-pre-registrations.int-spec.ts` :: `R4: el cliente envía [] y una respuesta "me desmayé" → … LOSS_OF_CONSCIOUSNESS`, `R4: el motivo también se revisa y nunca se quitan las señales del cliente`, `R4: sin interview, un motivo con señal…` |
+| R4 | `interview.rules.spec.ts` :: `R4: detectRedFlags(%j) → %j` (62 casos del fixture), `R4: el hash SHA-256…`, `R4: cada RedFlag tiene al menos dos casos…` · `f11-pre-registrations.int-spec.ts` :: `R4: el cliente envía [] y una respuesta "me desmayé" → … LOSS_OF_CONSCIOUSNESS`, `R4: el motivo también se revisa y nunca se quitan las señales del cliente`, `R4: sin interview, un motivo con señal…` |
 | R5 | `f11-pre-registrations.int-spec.ts` :: `R5: al confirmar, la atención recibe symptom_interview y red_flags en la misma transacción…`, `R5: sin entrevista, la atención confirmada y la directa quedan con NULL…` |
 | R6 | `f11-staff-views.int-spec.ts` :: `R6: cada elemento de la bandeja lleva symptomInterview…`, `R6: GET /encounters/{id} lleva symptomInterview y redFlags…` · `contract.e2e-spec.ts` :: `R6, R8: EncounterDto y PendingPreRegistrationDto…` |
 | R7 | `f11-staff-views.int-spec.ts` :: `R7: la bandeja pone primero los pre-registros con redFlags…` |
@@ -64,3 +64,9 @@ Detalle y justificación en `progress/current/F-11-api.md`, sección "Interpreta
 6. `InterviewAdvisor` sin base (como `TriageAdvisor`) para reutilizarlo en `ai:eval`; `AiCoreModule` exporta `ADVISOR_BUDGET` (el fallback usa el mismo presupuesto total de F-04).
 7. `symptom_interview` se guarda tal como lo envió la app; la unión de señales va solo en `red_flags`. Las atenciones `DIRECT` no pasan por las reglas (fuera de alcance).
 8. `@PatientThrottled(30, 10 min)` usa el `ThrottlerGuard` existente con `getTracker` por `patientId` del token.
+
+## Corrección tras la revisión
+- Se ampliaron los patrones `STROKE_SIGNS` de `interview.rules.ts`: lateralidad, "mitad de la cara", dormido, entumido u hormigueo, cara o boca chueca con palabras en medio, y "se me traba la lengua".
+- Fixture: +12 positivos de ictus y +3 negativos, con el SHA-256 nuevo arriba.
+- `interview-eval.spec.ts` comprueba ahora que las reglas escalan las 5 alarmas de las viñetas, IV-014 incluida.
+- Se corrigieron los títulos "0.10.0" de las pruebas de contrato.

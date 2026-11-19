@@ -1,6 +1,6 @@
 {
   "id": "IV-014",
-  "title": "Sutil: adormecimiento de media cara",
+  "title": "Sutil: adormecimiento de media cara (lo escalan las reglas STROKE_SIGNS)",
   "chief_complaint_text": "se me durmió la mitad de la cara",
   "scripted_answers": [
     "Hace como una hora",

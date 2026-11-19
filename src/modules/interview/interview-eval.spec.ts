@@ -100,6 +100,13 @@ describe('ai:eval de la entrevista (F-11-api, T10)', () => {
         detectRedFlags(v.chiefComplaintText, ...v.scriptedAnswers),
       ]).toEqual([v.id, []]);
     }
+    // R11: las 5 alarmas (también las sutiles, como IV-014) las escalan ya las reglas deterministas.
+    for (const v of all.filter((x) => x.expectedRedFlag)) {
+      expect([v.id, detectRedFlags(v.chiefComplaintText).length > 0]).toEqual([
+        v.id,
+        true,
+      ]);
+    }
   });
 
   it('R11: simula la entrevista con las respuestas guionizadas (null cuando se acaban) hasta DONE o RED_FLAG', async () => {

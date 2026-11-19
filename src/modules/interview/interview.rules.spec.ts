@@ -19,7 +19,7 @@ const FIXTURE = join(process.cwd(), 'test', 'fixtures', 'red-flag-cases.json');
  * Un cambio en los casos exige cambiar este hash en los dos repos.
  */
 const FIXTURE_SHA256 =
-  '343dd9c6231acaf3bee3122b49fdc974174c5899be42c0c8c7684ddd7b7f22cd';
+  '2d75bdbd0ba08e8e1c9d29ccc40c94ab8c9ca003c34ee8c642409c4da83fe6b7';
 
 interface Case {
   text: string;
