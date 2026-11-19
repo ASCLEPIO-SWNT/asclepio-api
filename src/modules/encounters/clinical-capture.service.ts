@@ -283,6 +283,11 @@ export class ClinicalCaptureService {
           }
         : null,
       symptomFindings: findings,
+      // F-11-api (R9): solo los turnos; el motor, el modelo y el motivo de fin no van al LLM.
+      symptomInterview: header.symptomInterview
+        ? { turns: header.symptomInterview.turns }
+        : null,
+      redFlags: header.redFlags,
       patient: {
         birthDate: patient?.birthDate ?? null,
         estimatedAgeYears: patient?.estimatedAgeYears ?? null,

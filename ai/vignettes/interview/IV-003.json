@@ -1,0 +1,22 @@
+{
+  "id": "IV-003",
+  "title": "Fiebre en adulto mayor",
+  "chief_complaint_text": "fiebre, tengo 78 años",
+  "scripted_answers": [
+    "Desde ayer en la tarde",
+    "Sube y baja",
+    "Me siento débil",
+    "En todo el cuerpo",
+    "Tos con flema y ardor al orinar",
+    "Hipertensión"
+  ],
+  "expected": {
+    "red_flag": false,
+    "must_cover": [
+      "ONSET",
+      "ASSOCIATED"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

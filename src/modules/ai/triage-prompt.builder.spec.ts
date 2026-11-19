@@ -23,17 +23,20 @@ const SNAPSHOT: TriageInputSnapshot = {
     glucose_mg_dl: null,
   },
   symptom_findings: [],
+  follow_up: [],
+  patient_reported_red_flags: [],
 };
 
 describe('TriagePromptBuilder (D11)', () => {
   const builder = new TriagePromptBuilder();
 
-  it('R11: usa el prompt versionado triage-v1 y su archivo ai/prompts/triage-v1.md', () => {
+  // F-11-api (R9): la versión vigente pasó de triage-v1 a triage-v2; triage-v1.md se conserva sin cambios.
+  it('R11: usa el prompt versionado vigente (triage-v2) y su archivo ai/prompts/triage-v2.md', () => {
     const p = builder.build(SNAPSHOT);
-    expect(PROMPT_VERSION).toBe('triage-v1');
-    expect(p.promptVersion).toBe('triage-v1');
+    expect(PROMPT_VERSION).toBe('triage-v2');
+    expect(p.promptVersion).toBe('triage-v2');
     const file = readFileSync(
-      join(process.cwd(), 'ai', 'prompts', 'triage-v1.md'),
+      join(process.cwd(), 'ai', 'prompts', 'triage-v2.md'),
       'utf8',
     );
     // El comentario de cabecera (metadatos para humanos) no se envía.

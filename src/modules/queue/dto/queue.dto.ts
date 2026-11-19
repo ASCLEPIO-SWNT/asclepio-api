@@ -87,6 +87,11 @@ export class QueueItemDto {
       'true solo en triaged cuando el tiempo exacto desde la clasificación (serverNow − triagedAt, en milisegundos) supera maxWaitMinutes (Res. 256 de 2016): nivel I con cualquier tiempo > 0, nivel II con más de 30 min. Como minutesSinceTriage se muestra en minutos completos, puede ser true con minutesSinceTriage igual al máximo (p. ej. 30 min y 1 s). Nunca en III–V, waitingTriage ni inCare.',
   })
   overdue: boolean;
+  @ApiProperty({
+    description:
+      'true si el paciente refirió señales de alarma (F-11, red_flags no vacío). Ordena waitingTriage (con señales primero); no cambia el nivel.',
+  })
+  hasRedFlags: boolean;
   @ApiProperty({ type: QueuePatientDto }) patient: QueuePatientDto;
 }
 
@@ -100,7 +105,7 @@ export class QueueDto {
   @ApiProperty({
     type: [QueueItemDto],
     description:
-      'WAITING_TRIAGE, mayor espera desde la llegada (waitMinutes) primero.',
+      'WAITING_TRIAGE: primero las que tienen señales de alarma (hasRedFlags) y, en cada grupo, mayor espera desde la llegada (waitMinutes) primero.',
   })
   waitingTriage: QueueItemDto[];
   @ApiProperty({

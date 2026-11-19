@@ -101,6 +101,8 @@ describe('F-06: listActiveForQueue (integración)', () => {
     expect(Object.keys(triaged).sort()).toEqual([
       'arrivalAt',
       'finalLevel',
+      // F-11-api (R8): solo si hay señales, no cuáles.
+      'hasRedFlags',
       'id',
       'patient',
       'siteId',

@@ -150,7 +150,8 @@ describe('F-04: GET /encounters/{id}/triage-suggestions (integración)', () => {
       ],
       provider: 'GROQ',
       model: 'openai/gpt-oss-120b',
-      promptVersion: 'triage-v1',
+      // F-11-api (R9): versión vigente del prompt.
+      promptVersion: 'triage-v2',
       createdAt: new Date(NOW.getTime() + 1000).toISOString(),
       requestedBy: { id: nurse.id, fullName: nurse.fullName },
     });

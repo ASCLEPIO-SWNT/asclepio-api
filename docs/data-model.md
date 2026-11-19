@@ -63,6 +63,8 @@ erDiagram
     smallint final_level "1-5, NULL hasta la decisión"
     timestamptz triaged_at
     uuid triaged_by FK
+    jsonb symptom_interview "F-11, copia del pre-registro; NULL sin entrevista"
+    text_array red_flags "F-11, '{}' por defecto"
   }
   vital_signs {
     uuid id PK
@@ -249,8 +251,19 @@ Pasar a `TRIAGED` exige una fila en `triage_decisions` (RNF-03).
 - Población = atenciones del tenant (y de la sede) con `arrival_at` en `[from 00:00 −05:00, to+1 00:00 −05:00)`, en cualquier estado. Inicio de atención = `occurred_at` del `STATUS_CHANGED` a `IN_CARE`; el cumplimiento de nivel II se mide de `triaged_at` a ese instante (Res. 256 de 2016), con el `30` de `MAX_WAIT_MINUTES_BY_LEVEL`.
 - El CSV es un formato interno (docs/reports-csv.md), no el de la Res. 373 ni SISPRO.
 
+### F-11-api (migración `f11_symptom_interview`; PA-F11-1, -2, -4 y -5 resueltas el 2026-11-18)
+
+- **Dueño:** `encounters`. Una sola migración, solo `ADD COLUMN` y CHECK, en `pre_registrations` y en `encounters`:
+  - `symptom_interview jsonb NULL`: la entrevista de la app tal como la envió el paciente (`{ engine, modelId, turns, redFlags, endedBy }`; la forma la valida la API). CHECK `*_symptom_interview_object` (NULL o un objeto JSON). Son **respuestas del paciente, no verificadas**.
+  - `red_flags text[] NOT NULL DEFAULT '{}'`: las señales que envió el cliente **unidas** a las que detectan las reglas del servidor sobre el motivo y las respuestas (D3: el servidor solo añade). CHECK `*_red_flags_allowed` (`red_flags <@ ARRAY[...]` con los siete valores de `RedFlag`, PA-F11-1, **PROVISIONAL**).
+- Al confirmar el pre-registro, las dos columnas se copian a la atención en la misma transacción que el motivo (R5). Las atenciones `DIRECT` quedan con `NULL` y `'{}'`.
+- Sin índices nuevos: la bandeja y la sección `waitingTriage` de la cola se ordenan en memoria (primero `red_flags` no vacío).
+- Sin grants nuevos: `asclepio_app` ya tiene `SELECT, INSERT, UPDATE` a nivel de tabla sobre ambas (f02). No toca `audit_log` ni `encounter_events`; la auditoría de la creación no lleva el contenido de la entrevista (RNF-05).
+- El fallback `POST /patient/symptom-interview/next-question` (módulo `interview`) **no persiste nada**.
+
 ### Pendiente (preguntas abiertas)
 
 - Validación clínica de la lista de signos y de los rangos provisionales de F-03 por un asesor clínico.
 - Validación clínica de la tabla NEWS2 y de las reglas G1–G3 de F-04 (PROVISIONALES) y revisión de las 20 viñetas en borrador.
+- Validación clínica de la lista de señales de alarma y de sus patrones de F-11 (PROVISIONALES, PA-F11-1).
 - `complaint_source`: el prompt fija `VOICE_ON_DEVICE`; `TYPED` es el valor propuesto para el texto escrito.

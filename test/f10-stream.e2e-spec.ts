@@ -43,6 +43,7 @@ function row(
     finalLevel: status === 'WAITING_TRIAGE' ? null : 3,
     arrivalAt: new Date(T.getTime() - arrivalMinAgo * 60_000),
     triagedAt: status === 'WAITING_TRIAGE' ? null : T,
+    hasRedFlags: false,
     patient: {
       fullName: 'DEV Persona',
       birthDate: '1980-01-01',

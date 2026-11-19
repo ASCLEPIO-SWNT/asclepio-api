@@ -1,0 +1,14 @@
+{
+  "id": "IV-012",
+  "title": "Síncope",
+  "chief_complaint_text": "me desmayé en el baño",
+  "scripted_answers": [
+    "Esta mañana"
+  ],
+  "expected": {
+    "red_flag": true,
+    "must_cover": []
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

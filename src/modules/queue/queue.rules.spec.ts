@@ -34,6 +34,7 @@ function row(
     finalLevel,
     arrivalAt,
     triagedAt,
+    hasRedFlags: false,
     patient: {
       fullName: 'DEV María José Pérez',
       birthDate: '1968-03-15',
@@ -185,6 +186,7 @@ describe('queue.rules (F-06-api)', () => {
           minutesSinceTriage: null,
           maxWaitMinutes: null,
           overdue: false,
+          hasRedFlags: false,
           patient: { initials: 'DP', ageYears: 58, sex: 'F' },
         },
       ]);
@@ -200,6 +202,7 @@ describe('queue.rules (F-06-api)', () => {
           minutesSinceTriage: 31,
           maxWaitMinutes: 30,
           overdue: true,
+          hasRedFlags: false,
           patient: { initials: null, ageYears: 40, sex: null },
         },
       ]);
@@ -215,6 +218,7 @@ describe('queue.rules (F-06-api)', () => {
           minutesSinceTriage: null,
           maxWaitMinutes: 0,
           overdue: false,
+          hasRedFlags: false,
           patient: { initials: 'DP', ageYears: null, sex: 'X' },
         },
       ]);

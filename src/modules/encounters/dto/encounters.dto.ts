@@ -4,14 +4,18 @@ import {
   Allow,
   IsIn,
   IsInt,
+  IsObject,
   IsString,
   IsUUID,
   Max,
   MaxLength,
   Min,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { IsTrimmedLength } from '../../../common/validation/trimmed-length.js';
+import { SymptomInterviewDto } from '../../interview/dto/interview.dto.js';
+import { RED_FLAGS, type RedFlag } from '../../interview/interview.rules.js';
 import { PatientDto } from '../../patients/dto/patients.dto.js';
 import {
   ENCOUNTER_STATUSES,
@@ -51,6 +55,17 @@ export class CreatePreRegistrationDto {
   @ApiProperty({ enum: COMPLAINT_SOURCES })
   @IsIn(COMPLAINT_SOURCES)
   complaintSource: ComplaintSource;
+
+  @ApiPropertyOptional({
+    type: SymptomInterviewDto,
+    description:
+      'Entrevista de síntomas de la app (F-11). Opcional: sin ella el pre-registro se crea como en 0.10.0. El servidor añade a redFlags las señales que detectan sus reglas sobre el motivo y las respuestas.',
+  })
+  @ValidateIf((o: CreatePreRegistrationDto) => o.interview !== undefined)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => SymptomInterviewDto)
+  interview?: SymptomInterviewDto;
 }
 
 export class PendingPreRegistrationsQueryDto {
@@ -180,6 +195,20 @@ export class PendingPreRegistrationDto {
   @ApiProperty({ description: 'identity_verified de la cuenta del paciente.' })
   identityVerified: boolean;
   @ApiProperty({ type: PatientDto }) patient: PatientDto;
+  @ApiProperty({
+    type: SymptomInterviewDto,
+    nullable: true,
+    description:
+      'Respuestas del paciente (no verificadas) de la entrevista de la app (F-11); null sin entrevista.',
+  })
+  symptomInterview: SymptomInterviewDto | null;
+  @ApiProperty({
+    enum: RED_FLAGS,
+    isArray: true,
+    description:
+      'Señales de alarma referidas por el paciente: las de la app unidas a las de las reglas del servidor (F-11, PA-F11-1 provisional). No cambian el nivel sugerido.',
+  })
+  redFlags: RedFlag[];
 }
 
 export class RejectedPreRegistrationDto {
@@ -272,6 +301,20 @@ export class EncounterSummaryDto {
 }
 
 export class EncounterDto extends EncounterSummaryDto {
+  @ApiProperty({
+    type: SymptomInterviewDto,
+    nullable: true,
+    description:
+      'Respuestas del paciente (no verificadas) de la entrevista de la app (F-11); null sin entrevista.',
+  })
+  symptomInterview: SymptomInterviewDto | null;
+  @ApiProperty({
+    enum: RED_FLAGS,
+    isArray: true,
+    description:
+      'Señales de alarma referidas por el paciente: las de la app unidas a las de las reglas del servidor (F-11, PA-F11-1 provisional). No cambian el nivel sugerido.',
+  })
+  redFlags: RedFlag[];
   @ApiProperty({ type: [EncounterEventDto] }) events: EncounterEventDto[];
 }
 

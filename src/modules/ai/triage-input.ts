@@ -1,4 +1,5 @@
 import type { CaptureForSuggestion } from '../encounters/capture-for-suggestion.js';
+import type { Dimension, RedFlag } from '../interview/interview.rules.js';
 import { ageInYears } from '../../common/clock/age.js';
 import { redact } from './redaction.js';
 
@@ -26,6 +27,13 @@ export interface SnapshotFinding {
   description: string;
 }
 
+/** Turno de la entrevista del paciente (F-11-api, R9): respuesta no verificada; null = "No sé". */
+export interface SnapshotFollowUp {
+  dimension: Dimension;
+  question: string;
+  answer: string | null;
+}
+
 export interface TriageInputSnapshot {
   age_years: number | null;
   sex: 'M' | 'F' | 'X' | null;
@@ -33,6 +41,10 @@ export interface TriageInputSnapshot {
   complaint_source: 'TYPED' | 'VOICE_ON_DEVICE';
   vital_signs: SnapshotVitalSigns;
   symptom_findings: SnapshotFinding[];
+  /** triage-v2 (F-11-api, R9): turnos de la entrevista, saneados con redact(); [] sin entrevista. */
+  follow_up: SnapshotFollowUp[];
+  /** triage-v2 (F-11-api, R9): señales de alarma referidas por el paciente; no cambian el nivel por sí mismas (R10). */
+  patient_reported_red_flags: RedFlag[];
 }
 
 // ageInYears vive en common/clock/age.ts (F-06-api, D4); se reexporta para los importadores de F-04.
@@ -40,8 +52,9 @@ export { ageInYears };
 
 /**
  * Construye la instantánea de entrada (R8, R9) a partir de la captura vigente y la fecha civil de hoy en Bogotá.
- * Solo copia los campos de D7: nada de ids, horas, fecha de nacimiento, nombre ni documento. El motivo y cada
- * description se sanean con el nombre y el documento del paciente (PA-F04-7).
+ * Solo copia los campos de D7 (y, desde triage-v2, follow_up y patient_reported_red_flags de F-11): nada de ids,
+ * horas, fecha de nacimiento, nombre ni documento. El motivo, cada description y cada pregunta y respuesta de la
+ * entrevista se sanean con el nombre y el documento del paciente (PA-F04-7).
  */
 export function buildSnapshot(
   capture: CaptureForSuggestion,
@@ -76,5 +89,11 @@ export function buildSnapshot(
       kind: f.kind,
       description: redact(f.description, target),
     })),
+    follow_up: (capture.symptomInterview?.turns ?? []).map((t) => ({
+      dimension: t.dimension,
+      question: redact(t.question, target),
+      answer: t.answer === null ? null : redact(t.answer, target),
+    })),
+    patient_reported_red_flags: [...capture.redFlags],
   };
 }

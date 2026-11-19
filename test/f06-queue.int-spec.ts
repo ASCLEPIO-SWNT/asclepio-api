@@ -174,6 +174,8 @@ describe('F-06: GET /queue (integración)', () => {
       minutesSinceTriage: null,
       maxWaitMinutes: null,
       overdue: false,
+      // F-11-api (R8): las atenciones DIRECT no llevan señales.
+      hasRedFlags: false,
       patient: { initials: 'DR', ageYears: 56, sex: 'M' },
     });
     expect(q.triaged.find((i) => i.encounterId === e.t2NewB)).toEqual({
@@ -187,6 +189,8 @@ describe('F-06: GET /queue (integración)', () => {
       minutesSinceTriage: 10,
       maxWaitMinutes: 30,
       overdue: false,
+      // F-11-api (R8): las atenciones DIRECT no llevan señales.
+      hasRedFlags: false,
       patient: { initials: 'DR', ageYears: 56, sex: 'M' },
     });
     expect(q.inCare[0]).toMatchObject({

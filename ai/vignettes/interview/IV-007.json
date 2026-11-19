@@ -1,0 +1,22 @@
+{
+  "id": "IV-007",
+  "title": "Tos",
+  "chief_complaint_text": "tos",
+  "scripted_answers": [
+    "Hace una semana",
+    "Todo el día, más de noche",
+    "Leve",
+    "En la garganta",
+    "Mocos y algo de fiebre",
+    "Asma de niño"
+  ],
+  "expected": {
+    "red_flag": false,
+    "must_cover": [
+      "DURATION",
+      "ASSOCIATED"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

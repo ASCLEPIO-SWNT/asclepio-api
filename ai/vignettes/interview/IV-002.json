@@ -1,0 +1,22 @@
+{
+  "id": "IV-002",
+  "title": "Dolor abdominal inespecífico",
+  "chief_complaint_text": "dolor de barriga",
+  "scripted_answers": [
+    "Desde anoche",
+    "Va y viene",
+    "Como un 5",
+    "Abajo, al lado derecho",
+    "Náuseas, sin vómito",
+    "No"
+  ],
+  "expected": {
+    "red_flag": false,
+    "must_cover": [
+      "LOCATION",
+      "ONSET"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

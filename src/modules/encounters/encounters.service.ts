@@ -18,6 +18,8 @@ import { AuditService } from '../audit/audit.service.js';
 import { PatientsService } from '../patients/patients.service.js';
 import { TenancyService } from '../tenancy/tenancy.service.js';
 import { UsersService } from '../users/users.service.js';
+import type { SymptomInterviewDto } from '../interview/dto/interview.dto.js';
+import type { RedFlag } from '../interview/interview.rules.js';
 import type {
   ComplaintSource,
   CreateEncounterDto,
@@ -80,6 +82,8 @@ export interface ActiveEncounterForQueue {
   arrivalAt: Date;
   /** Hora de la decisión de triage (F-05); la cola cuenta desde ella la alerta y el orden de triaged (DT-02-api). */
   triagedAt: Date | null;
+  /** red_flags no vacío (F-11-api, R8): la cola prioriza la espera de triage. Sin exponer cuáles. */
+  hasRedFlags: boolean;
   patient: {
     fullName: string | null;
     /** Fecha civil YYYY-MM-DD. */
@@ -127,6 +131,9 @@ export interface NewEncounter {
   /** arrival_at y occurred_at de los dos eventos (D22). */
   now: Date;
   preRegistrationId?: string;
+  /** Entrevista de síntomas copiada del pre-registro (F-11-api, R5); las atenciones DIRECT no la llevan. */
+  symptomInterview?: Prisma.JsonValue | null;
+  redFlags?: string[];
 }
 
 const SUMMARY_SELECT = {
@@ -147,6 +154,13 @@ const SUMMARY_SELECT = {
 } as const;
 
 type SummaryRow = Prisma.EncounterGetPayload<{ select: typeof SUMMARY_SELECT }>;
+
+/** GET /encounters/{id} y demás EncounterDto: el resumen más la entrevista y las señales (F-11-api, R6). */
+const DETAIL_SELECT = {
+  ...SUMMARY_SELECT,
+  symptomInterview: true,
+  redFlags: true,
+} as const;
 
 /** true si el error es una violación de único (índices parciales de D7 o encounter_id único). */
 export function isUniqueViolation(e: unknown): boolean {
@@ -230,6 +244,10 @@ export class EncountersService {
         chiefComplaintText: n.chiefComplaintText,
         complaintSource: n.complaintSource,
         registeredBy: n.registeredBy,
+        ...(n.symptomInterview != null
+          ? { symptomInterview: n.symptomInterview }
+          : {}),
+        redFlags: n.redFlags ?? [],
       },
       select: { id: true },
     });
@@ -487,7 +505,7 @@ export class EncountersService {
    * Motivo de consulta, estado y paciente de la atención del tenant para GET /clinical-capture (R20 de F-03) y la
    * sugerencia de F-04; null si no existe, es de otro tenant o el id no es UUID.
    */
-  findCaptureHeader(
+  async findCaptureHeader(
     tenantId: string,
     id: string,
   ): Promise<{
@@ -495,17 +513,29 @@ export class EncountersService {
     chiefComplaintText: string;
     complaintSource: ComplaintSource;
     patientId: string;
+    /** F-11-api (R9): entrevista y señales para la instantánea v2 del LLM. */
+    symptomInterview: SymptomInterviewDto | null;
+    redFlags: RedFlag[];
   } | null> {
-    if (!isUuid(id)) return Promise.resolve(null);
-    return this.prisma.encounter.findFirst({
+    if (!isUuid(id)) return null;
+    const row = await this.prisma.encounter.findFirst({
       where: { id, tenantId },
       select: {
         status: true,
         chiefComplaintText: true,
         complaintSource: true,
         patientId: true,
+        symptomInterview: true,
+        redFlags: true,
       },
     });
+    return row
+      ? {
+          ...row,
+          symptomInterview: row.symptomInterview as SymptomInterviewDto | null,
+          redFlags: row.redFlags as RedFlag[],
+        }
+      : null;
   }
 
   /** POST /encounters/{id}/cancel (R35, R36): motivo en encounters.cancellation_reason, nunca en eventos ni auditoría. */
@@ -580,7 +610,7 @@ export class EncountersService {
     const row = isUuid(id)
       ? await this.prisma.encounter.findFirst({
           where: { id, tenantId },
-          select: SUMMARY_SELECT,
+          select: DETAIL_SELECT,
         })
       : null;
     if (!row) throw new NotFoundException(NOT_FOUND);
@@ -592,6 +622,9 @@ export class EncountersService {
     const names = summary.names;
     return {
       ...summary.dto,
+      // F-11 (R6): respuestas del paciente, no verificadas; las valida la API al recibirlas (R2).
+      symptomInterview: row.symptomInterview as SymptomInterviewDto | null,
+      redFlags: row.redFlags as RedFlag[],
       events: events.map((e) => ({
         id: e.id.toString(),
         type: e.type,
@@ -634,6 +667,7 @@ export class EncountersService {
         finalLevel: true,
         arrivalAt: true,
         triagedAt: true,
+        redFlags: true,
       },
     });
     if (!rows.length) return [];
@@ -657,6 +691,7 @@ export class EncountersService {
         finalLevel: r.finalLevel,
         arrivalAt: r.arrivalAt,
         triagedAt: r.triagedAt,
+        hasRedFlags: r.redFlags.length > 0,
         patient: {
           fullName: p?.fullName ?? null,
           birthDate: p?.birthDate ?? null,

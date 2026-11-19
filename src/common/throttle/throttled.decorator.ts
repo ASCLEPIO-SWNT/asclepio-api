@@ -4,10 +4,11 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { ProblemDetailsDto } from '../problem/problem-details.dto.js';
 
 /** Respuesta 429 documentada (problem+json con Retry-After), común a @Throttled() y @PublicThrottled(). */
-export const ApiThrottledResponse = () =>
+export const ApiThrottledResponse = (
+  description = 'Demasiadas peticiones desde esta IP a este endpoint (application/problem+json).',
+) =>
   ApiTooManyRequestsResponse({
-    description:
-      'Demasiadas peticiones desde esta IP a este endpoint (application/problem+json).',
+    description,
     headers: {
       'Retry-After': {
         description: 'Segundos hasta que termina la ventana del límite.',

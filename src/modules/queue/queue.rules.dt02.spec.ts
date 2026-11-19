@@ -38,6 +38,7 @@ function row(
     finalLevel,
     arrivalAt,
     triagedAt,
+    hasRedFlags: false,
     patient: {
       fullName: 'DEV María José Pérez',
       birthDate: '1968-03-15',
