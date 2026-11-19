@@ -128,7 +128,8 @@ export class TriageDecisionsService {
     const now = this.clock.now();
     let result: { row: Row; suggestedLevel: number | null };
     try {
-      result = await this.prisma.$transaction(async (tx) => {
+      // inTransaction: el paso a TRIAGED se publica en changes$ tras el commit (F-10-api, R8).
+      result = await this.encounters.inTransaction(async (tx) => {
         // (1) Bloqueo de la atención en WAITING_TRIAGE: 404 (R14) o 409 (R12 si ya hay decisión, si no R13).
         try {
           await this.encounters.lockForCapture(

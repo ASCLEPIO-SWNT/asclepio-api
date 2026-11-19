@@ -1877,6 +1877,142 @@
         ]
       }
     },
+    "/api/v1/patient/queue-position": {
+      "get": {
+        "description": "Instantánea de la atención activa del paciente del token: fase, posición dentro de la fase (el mismo orden de la cola del personal, limitado a su sede), personas delante y un rango de espera por el ritmo reciente de la sede (PA-F10-1, provisional). Sin atención activa → NO_ACTIVE. Nunca incluye identificadores, niveles de triage (tampoco el propio) ni datos de otros pacientes.",
+        "operationId": "PatientQueueController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueuePositionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Hay algún parámetro de consulta (no admite ninguno).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token válido.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token de personal.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error en application/problem+json (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Posición del paciente en la fila y espera estimada",
+        "tags": [
+          "patient"
+        ]
+      }
+    },
+    "/api/v1/patient/queue-position/stream": {
+      "get": {
+        "description": "Stream text/event-stream (ADR 0009). Al abrirlo envía un evento `position` cuyo data es un QueuePositionDto; después envía uno nuevo solo cuando la instantánea cambia: en ≤ 2 s tras un registro, una decisión de triage o un cambio de estado en la sede, y en un recálculo cada 15 s. Si el recálculo no cambia nada, envía el comentario de latido `: ping`. Cuando la atención termina (CLOSED o CANCELLED) envía `position` con phase = DONE y cierra; también cierra al vencer el token. El cliente se reconecta con backoff. Los errores 400, 401 y 403 llegan antes de abrir el stream, en application/problem+json.",
+        "operationId": "PatientQueueController_stream",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "event: position · data: QueuePositionDto (JSON); comentarios `: ping` de latido.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Hay algún parámetro de consulta (no admite ninguno).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token válido.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token de personal.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error en application/problem+json (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Posición del paciente en vivo (Server-Sent Events)",
+        "tags": [
+          "patient"
+        ]
+      }
+    },
     "/api/v1/reports/summary": {
       "get": {
         "description": "Indicadores de las atenciones del tenant (o de la sede siteId) cuya llegada cae en el periodo [from 00:00 −05:00, to+1 00:00 −05:00) de America/Bogota: minutos de llegada a triage por nivel (n, mediana y p90), minutos de triage a atención de los niveles I y II, cumplimiento del nivel II (≤ 30 min desde la clasificación hasta la atención médica, como el indicador \"Tiempo de espera Triage II\" de la Res. 256 de 2016; el nivel I se informa sin porcentaje), concordancia IA–enfermería (acuerdo exacto, kappa de Cohen ponderado cuadrático, sub y sobreclasificación y matriz 5×5, solo con VALIDATE y CORRECT y la sugerencia decidida) y uso del respaldo y de los safety guards. Porcentajes con 1 decimal y null si el denominador es 0.",
@@ -2111,7 +2247,7 @@
   "info": {
     "title": "Asclepio API",
     "description": "Triage de urgencias asistido por IA. La IA propone, el profesional decide.",
-    "version": "0.9.0",
+    "version": "0.10.0",
     "contact": {}
   },
   "tags": [],
@@ -4025,6 +4161,85 @@
           "waitingTriage",
           "triaged",
           "inCare"
+        ]
+      },
+      "WaitEstimateDto": {
+        "type": "object",
+        "properties": {
+          "minMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Límite inferior: 0,5 × eta, redondeado hacia abajo a 5 min."
+          },
+          "maxMinutes": {
+            "type": "integer",
+            "minimum": 5,
+            "description": "Límite superior: 1,5 × eta, redondeado hacia arriba a 5 min, nunca menos de 5."
+          }
+        },
+        "required": [
+          "minMinutes",
+          "maxMinutes"
+        ]
+      },
+      "QueuePositionDto": {
+        "type": "object",
+        "properties": {
+          "phase": {
+            "type": "string",
+            "enum": [
+              "NO_ACTIVE",
+              "WAITING_TRIAGE",
+              "WAITING_CARE",
+              "CALLED",
+              "DONE"
+            ],
+            "description": "NO_ACTIVE: sin atención activa (p. ej. pre-registro pendiente de recepción). WAITING_TRIAGE: espera de triage. WAITING_CARE: clasificado, espera de atención médica. CALLED: en atención. DONE: la atención terminó (solo en el stream, que se cierra a continuación)."
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true,
+            "description": "Posición (desde 1) dentro de la fase, con el mismo orden de la cola del personal (F-06) limitado a la sede de la atención. null en CALLED, DONE y NO_ACTIVE."
+          },
+          "aheadCount": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true,
+            "description": "Personas delante (position − 1); null cuando position es null."
+          },
+          "estimate": {
+            "nullable": true,
+            "description": "Rango de espera por el ritmo reciente de la fase en la sede (salidas en las últimas 4 h): eta = aheadCount × 240 / salidas. null con menos de 5 salidas (INSUFFICIENT_DATA) o sin posición.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WaitEstimateDto"
+              }
+            ]
+          },
+          "estimateBasis": {
+            "type": "string",
+            "enum": [
+              "RECENT_THROUGHPUT",
+              "INSUFFICIENT_DATA"
+            ],
+            "nullable": true,
+            "description": "RECENT_THROUGHPUT si hay estimación; INSUFFICIENT_DATA con menos de 5 salidas de la fase en la ventana; null sin posición."
+          },
+          "serverNow": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Hora del servidor con la que se calculó la instantánea."
+          }
+        },
+        "required": [
+          "phase",
+          "position",
+          "aheadCount",
+          "estimate",
+          "estimateBasis",
+          "serverNow"
         ]
       },
       "ReportPeriodDto": {

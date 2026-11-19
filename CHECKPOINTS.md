@@ -16,7 +16,7 @@
 - [ ] `docs/roadmap.md` refleja los slices `done`.
 
 ## C3 — El código respeta la arquitectura
-- [ ] `src/modules/` solo contiene los 10 módulos de `docs/architecture.md`.
+- [ ] `src/modules/` solo contiene los módulos listados en `docs/architecture.md`.
 - [ ] Ningún módulo importa el repositorio o modelo Prisma de otro módulo; accede mediante su service exportado.
 - [ ] Lo transversal está en `src/common/`; el esquema y las migraciones, en `prisma/`.
 - [ ] No hay dependencias nuevas sin justificación en el `design.md`.
