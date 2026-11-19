@@ -49,6 +49,8 @@ export const INTERVIEW_LIMITS = Object.freeze({
   modelIdMax: 80,
   turnQuestionMax: 200,
   turnAnswerMax: 500,
+  /** Motivo de consulta de next-question: el mismo máximo que COMPLAINT_MAX del pre-registro. */
+  chiefComplaintMax: 2000,
   /** Pregunta del LLM (validador). */
   llmQuestionMax: 140,
 });

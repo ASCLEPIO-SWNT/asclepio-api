@@ -4,14 +4,17 @@ import {
   Allow,
   IsIn,
   IsInt,
+  IsObject,
   IsString,
   IsUUID,
   Max,
   MaxLength,
   Min,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { IsTrimmedLength } from '../../../common/validation/trimmed-length.js';
+import { SymptomInterviewDto } from '../../interview/dto/interview.dto.js';
 import { PatientDto } from '../../patients/dto/patients.dto.js';
 import {
   ENCOUNTER_STATUSES,
@@ -51,6 +54,17 @@ export class CreatePreRegistrationDto {
   @ApiProperty({ enum: COMPLAINT_SOURCES })
   @IsIn(COMPLAINT_SOURCES)
   complaintSource: ComplaintSource;
+
+  @ApiPropertyOptional({
+    type: SymptomInterviewDto,
+    description:
+      'Entrevista de síntomas de la app (F-11). Opcional: sin ella el pre-registro se crea como en 0.10.0. El servidor añade a redFlags las señales que detectan sus reglas sobre el motivo y las respuestas.',
+  })
+  @ValidateIf((o: CreatePreRegistrationDto) => o.interview !== undefined)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => SymptomInterviewDto)
+  interview?: SymptomInterviewDto;
 }
 
 export class PendingPreRegistrationsQueryDto {

@@ -10,7 +10,7 @@
   - `FIXED_QUESTIONS` y `nextFallback`.
 
   (R4, R11, R12, R13, R14)
-- [ ] T3 Prueba + DTOs y validación de `interview`:
+- [x] T3 Prueba + DTOs y validación de `interview`:
   - `R2:` 400 por cada regla, sin eco de los valores;
   - `R3:` retrocompatible sin `interview`.
 
