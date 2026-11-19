@@ -126,3 +126,9 @@ Cada sesión cerrada añade una entrada al final con: fecha, feature, resultado,
 - **Revisión:** RECHAZADA una vez (las reglas de `STROKE_SIGNS` no detectaban "se me durmió la mitad de la cara" ni "debilidad en el brazo derecho"). Se corrigió y se APROBÓ.
 - **Observaciones:** falso positivo aceptado ("estuve durmiendo del lado derecho…" → `STROKE_SIGNS`, en la duda se escala). Aclarar la redacción de R3 frente a R4. **Pendiente del humano:** `npm run ai:eval` con las viñetas nuevas de entrevista (T10).
 - **Para F-11-mobile:** consumir 0.11.0, copiar el fixture con el hash anterior y portar `RED_FLAG_PATTERNS` (sintaxis compatible con `java.util.regex`). Aplicar a su R12 la misma enmienda que a R13.
+- **Enmienda tras `ai:eval` (humano, 2026-11-18; T12, commits 581c2c1 y 15f5097):**
+  - `done` del LLM exige `ONSET` y, si hay dolor (`dolor`, `duele`, `doler`), también `LOCATION`; si falta alguna, se hace la pregunta fija;
+  - con 0 turnos se ignora `redFlagSuspected` del LLM (las reglas sobre el motivo se aplican antes);
+  - prompt `interview-v2` (se conserva `interview-v1`).
+
+  Revisión APROBADA (la primera corrida se cortó por el límite de uso y se repitió). Observación: `mentionsPain` no detecta "dolió" ni "dolía". F-11-mobile debe portar esta misma lógica.
