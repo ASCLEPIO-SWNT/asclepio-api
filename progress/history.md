@@ -107,3 +107,22 @@ Cada sesión cerrada añade una entrada al final con: fecha, feature, resultado,
 - **Pruebas:** 274 unitarias, 96 e2e y 348 de integración (Docker). R1–R13 cubiertos.
 - **Revisión:** APROBADA. Observaciones: `countPhaseExits` recibe además `until` (= `serverNow`); el stream relee `exp` del Bearer (con `exp` ausente se cierra, que es lo seguro); en `NO_ACTIVE` el stream sigue abierto hasta que vence el token (F-10-mobile solo conecta con la pantalla visible). C3 de CHECKPOINTS pasa a "los módulos listados".
 - **Para F-10-mobile:** consumir 0.10.0; `event: position` con `QueuePositionDto` y comentarios de latido; 401/403 antes de abrir el stream.
+
+## 2026-11-18 — F-11-api: entrevista de síntomas (persistencia, IA v2, prioridad y fallback en servidor) → done
+
+- **Spec:** aprobada por el humano el 2026-11-18 (PA-F11-1, -2, -4 y -5 con la propuesta). Enmienda de R13 por decisión del humano el mismo día: una salida con el esquema válido y `redFlagSuspected = true` escala aunque la pregunta no pase el validador. Rama `feature/F-11-api` desde `develop` (con F-10-api).
+- **Resultado:**
+  - campo opcional `interview` en `POST /patient/pre-registrations`;
+  - columnas `symptom_interview jsonb` y `red_flags text[]` (con CHECK) en `pre_registrations` y `encounters`, que se copian al confirmar;
+  - el servidor une las señales detectadas por `detectRedFlags` en el motivo y las respuestas: solo añade, nunca quita, y también actúa sin entrevista (R4 prevalece sobre R3);
+  - `symptomInterview` y `redFlags` aparecen en `EncounterDto` y `PendingPreRegistrationDto`, y `hasRedFlags` en la cola;
+  - la bandeja y la espera de triage ponen primero las señales de alarma (F-10 lo hereda);
+  - snapshot `triage-v2` con `follow_up` redactado y `patient_reported_red_flags`, sin guard nueva;
+  - módulo `interview` con `POST /patient/symptom-interview/next-question`, que usa reglas, validador, reintento, pregunta fija y `RED_FLAG`, con `redact()`, sin persistencia ni logs de contenido y con límite de 30 peticiones cada 10 min (429);
+  - contrato **0.11.0**.
+- **Datos:** migración `20261119022808_f11_symptom_interview`, creada con `--create-only` contra Docker y aditiva. **Pendiente del humano: `migrate deploy` en Supabase.**
+- **Fixture compartido:** `test/fixtures/red-flag-cases.json`, 62 casos, SHA-256 `2d75bdbd0ba08e8e1c9d29ccc40c94ab8c9ca003c34ee8c642409c4da83fe6b7`. F-11-mobile lo copia literalmente.
+- **Pruebas:** `npm test` y 362 de integración (Docker) en verde. R1–R17 cubiertos. Ninguna prueba llama a Groq ni a OpenRouter.
+- **Revisión:** RECHAZADA una vez (las reglas de `STROKE_SIGNS` no detectaban "se me durmió la mitad de la cara" ni "debilidad en el brazo derecho"). Se corrigió y se APROBÓ.
+- **Observaciones:** falso positivo aceptado ("estuve durmiendo del lado derecho…" → `STROKE_SIGNS`, en la duda se escala). Aclarar la redacción de R3 frente a R4. **Pendiente del humano:** `npm run ai:eval` con las viñetas nuevas de entrevista (T10).
+- **Para F-11-mobile:** consumir 0.11.0, copiar el fixture con el hash anterior y portar `RED_FLAG_PATTERNS` (sintaxis compatible con `java.util.regex`). Aplicar a su R12 la misma enmienda que a R13.
