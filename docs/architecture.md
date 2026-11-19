@@ -17,7 +17,7 @@ src/
 │   ├── auth/  users/  tenancy/
 │   ├── patients/  encounters/  triage/  ai/
 │   ├── queue/  reports/  audit/
-│   ├── patient-queue/
+│   ├── patient-queue/  interview/
 └── scripts/                # CLI: users-create.ts (npm run users:create), sites-create.ts (npm run sites:create)
 prisma/
 ├── schema.prisma           # provider postgresql, schemas = ["asclepio"] (Prisma 7: sin URLs aquí)
@@ -39,12 +39,13 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 | `users`      | Usuarios y roles                                                                                                                                | `users`                                                                                  | `tenancy`                                                                  |
 | `tenancy`    | Tenants, sedes y contexto de tenant por petición                                                                                                | `tenants`, `sites`                                                                       | —                                                                          |
 | `patients`   | Búsqueda y alta de pacientes (NN y menores) y perfil del paciente en la app (F-02)                                                              | `patients`                                                                               | `audit`                                                                    |
-| `encounters` | Pre-registros, atenciones, máquina de estados, línea de tiempo y captura clínica                                                                | `pre_registrations`, `encounters`, `encounter_events`, `vital_signs`, `symptom_findings` | `patients`, `tenancy`, `auth` (`PatientAccountsService`), `users`, `audit` |
+| `encounters` | Pre-registros, atenciones, máquina de estados, línea de tiempo y captura clínica                                                                | `pre_registrations`, `encounters`, `encounter_events`, `vital_signs`, `symptom_findings` | `patients`, `tenancy`, `auth` (`PatientAccountsService`), `users`, `audit` y las reglas puras de `interview` (F-11) |
 | `triage`     | Decisiones humanas (VALIDATE/CORRECT/MANUAL)                                                                                                    | `triage_decisions`                                                                       | `encounters`, `ai`, `audit`, `users` (nombre del responsable)              |
 | `ai`         | Sugerencia: `LlmClient` (`GroqAdapter`, `OpenRouterAdapter`), `TriagePromptBuilder`, `TriageResponseValidator`, `SafetyGuards`, `TriageAdvisor` | `triage_suggestions`                                                                     | `encounters` (solo lectura de la captura), `audit`, `users` (nombre del responsable) |
 | `queue`      | Cola priorizada (F-06: solo lectura con `listActiveForQueue`; no usa `triage`)                                                                  | —                                                                                        | `encounters`, `triage`                                                     |
 | `reports`    | Tiempos, cumplimiento, concordancia y CSV (F-07: solo lectura; audita la descarga del CSV)                                                      | —                                                                                        | `encounters`, `triage`, `ai`, `audit` (y la constante pura `queue.rules`)  |
 | `patient-queue` | Posición del paciente en la fila y espera estimada: instantánea y stream SSE (F-10: solo lectura; ADR 0009) | — | `encounters` (y la función pura `queue.rules`) |
+| `interview` | Entrevista de síntomas (F-11): reglas puras (`interview.rules.ts`: dimensiones, señales de alarma, validador y preguntas fijas) y fallback `next-question` sin estado (`InterviewAdvisor`, ADR 0010) | — | `ai` (puertos del LLM, `redact`, presupuesto), `patients` (nombre y documento para `redact`) |
 | `audit`      | Escritura append-only de `audit_log`                                                                                                            | `audit_log`                                                                              | —                                                                          |
 
 ## Dependencias
@@ -133,6 +134,16 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 - Bus de cambios: **`EncountersService.changes$`** (`Subject` de rxjs, `{ tenantId, siteId }`). `createInTx`, `transition` y `recordTriage` registran el cambio en su transacción y **`EncountersService.inTransaction(fn)`** lo publica solo tras el commit; la usan `createDirect`, `cancel`, `startCare`/`close`, `PreRegistrationsService.confirm` y `TriageDecisionsService.decide`. Techo: un solo proceso (con varias instancias, `LISTEN/NOTIFY`).
 - `position-stream.ts` (puro sobre rxjs): `merge(inicio, cambios de la sede con debounce de 1 s, intervalo de 15 s)` → `switchMap(compute)` → evento `position` solo si la instantánea cambió (sin `serverNow`), y si no, en el intervalo, el comentario `: ping`. Termina tras `DONE` (la atención con la que se abrió ya no es la activa) o al vencer el token (`exp`). Tiempos en `PATIENT_QUEUE_TIMING`.
 - Los logs solo llevan `tenantId` y la fase.
+
+## Entrevista de síntomas (F-11)
+
+- **Pre-registro (`encounters`):** `CreatePreRegistrationDto.interview` opcional (`SymptomInterviewDto`, `InterviewTurnDto` en `interview/dto/`; 400 sin eco). `PreRegistrationsService` guarda `symptom_interview` tal como llega y `red_flags` = señales del cliente ∪ `detectRedFlags(motivo + respuestas)` (el servidor solo añade, D3; también sin entrevista). `confirm` copia ambas columnas a la atención con `createInTx`, en la misma transacción que el motivo (el patrón `inTransaction`/`changes$` de F-10 no cambia).
+- **Vistas del personal:** `EncounterDto` (todas las respuestas de `findOne`) y `PendingPreRegistrationDto` llevan `symptomInterview` y `redFlags`; la bandeja pone primero los que tienen señales (orden estable). `PatientPreRegistrationDto` no cambia.
+- **Cola:** `listActiveForQueue` devuelve `hasRedFlags` (sin decir cuáles); `buildQueue` ordena `waitingTriage` con señales primero y después mayor espera; `triaged` e `inCare` no cambian. F-10 (`positionOf`) lo hereda.
+- **IA de triage (`ai`, triage-v2):** `ClinicalCaptureService.getForSuggestion` añade los turnos y las señales; `buildSnapshot` añade `follow_up` (pregunta y respuesta por `redact()`) y `patient_reported_red_flags`; `PROMPT_VERSION = 'triage-v2'` (`ai/prompts/triage-v2.md`; `triage-v1.md` intacto). El validador admite citar `follow_up[n]` y `patient_reported_red_flags`. SafetyGuards sin cambios (PA-F11-2).
+- **Fallback `POST /patient/symptom-interview/next-question` (`interview`):** `@PatientOnly()` y `@PatientThrottled(30, 10 min)` (`common/throttle/`, el mismo `ThrottlerGuard` en memoria con el tracker por `patientId` del token). `InterviewService` resuelve el paciente para `redact()` y delega en **`InterviewAdvisor`** (en `InterviewCoreModule`, sin base, como `TriageAdvisor`): reglas de alarma → `RED_FLAG`; 5 turnos → `DONE`; si no, prompt `interview-v1` por el `LlmClient` de `ai` (Groq → OpenRouter, timeout, `temperature 0`, `json_schema` strict, presupuesto total de F-04) → `validateQuestion` con un reintento → pregunta fija (`nextFallback`). Timeout → pregunta fija; sin salida de ningún proveedor → 503. No persiste nada; el log solo lleva el tipo de respuesta y recuentos.
+- **`ai:eval`:** además de las viñetas de triage, recorre `ai/vignettes/interview/` con `InterviewAdvisor` (`interview-eval.ts`).
+- **Fixture compartido:** `test/fixtures/red-flag-cases.json` (SHA-256 fijado en `interview.rules.spec.ts`); asclepio-mobile lo copia literalmente.
 
 ## Scripts y pruebas
 

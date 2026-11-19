@@ -1,13 +1,8 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common';
-import {
-  ApiOkResponse,
-  ApiServiceUnavailableResponse,
-  ApiTags,
-  getSchemaPath,
-} from '@nestjs/swagger';
+import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentPrincipal, PatientOnly } from '../../common/auth/decorators.js';
 import type { PatientPrincipal } from '../../common/auth/principal.js';
-import { ProblemDetailsDto } from '../../common/problem/problem-details.dto.js';
+import { ApiProblemResponse } from '../../common/problem/api-problem-response.js';
 import { PatientThrottled } from '../../common/throttle/patient-throttled.decorator.js';
 import {
   NextQuestionDto,
@@ -36,15 +31,16 @@ export class InterviewController {
     description:
       'Siguiente paso de la entrevista. Primero se aplican las reglas de señales de alarma (RED_FLAG). Nada de la petición ni de la respuesta se guarda ni se registra.',
   })
-  @ApiServiceUnavailableResponse({
-    description:
-      'Ningún proveedor del LLM respondió: la app envía el pre-registro sin entrevista (application/problem+json).',
-    content: {
-      'application/problem+json': {
-        schema: { $ref: getSchemaPath(ProblemDetailsDto) },
-      },
-    },
-  })
+  @ApiProblemResponse(
+    400,
+    'Cuerpo inválido: motivo de 1 a 2000 caracteres, 0 a 5 turnos con dimension, question (1–200) y answer (1–500 o null), sin campos extra. Los errores no repiten los valores.',
+  )
+  @ApiProblemResponse(401, 'Sin token válido.')
+  @ApiProblemResponse(403, 'Token de personal.')
+  @ApiProblemResponse(
+    503,
+    'Ningún proveedor del LLM respondió: la app envía el pre-registro sin entrevista.',
+  )
   next(
     @CurrentPrincipal() principal: PatientPrincipal,
     @Body() dto: NextQuestionRequestDto,
