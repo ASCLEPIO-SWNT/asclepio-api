@@ -5,7 +5,7 @@ import { buildOpenApiDocument } from '../src/app.setup.js';
 import { VITAL_SIGN_DEFINITIONS } from '../src/modules/encounters/vital-signs.rules.js';
 import { createApp } from './e2e-app.js';
 
-describe('Contrato OpenAPI 0.9.x (e2e, sin base)', () => {
+describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
   let app: INestApplication<App>;
   beforeAll(async () => {
     app = await createApp();
@@ -33,6 +33,8 @@ describe('Contrato OpenAPI 0.9.x (e2e, sin base)', () => {
       '/api/v1/patient/pre-registrations',
       '/api/v1/patient/pre-registrations/{id}',
       '/api/v1/patient/profile',
+      '/api/v1/patient/queue-position',
+      '/api/v1/patient/queue-position/stream',
       '/api/v1/patients',
       '/api/v1/pre-registrations',
       '/api/v1/pre-registrations/{id}/confirm',
@@ -105,9 +107,9 @@ describe('Contrato OpenAPI 0.9.x (e2e, sin base)', () => {
     for (const op of ops) expect(op?.security).toEqual([{ bearer: [] }]);
   });
 
-  it('R21: los tres endpoints de F-03 declaran el esquema bearer y sus respuestas (F-03 publicó 0.4.0; F-04 subió a 0.5.0, F-05 a 0.6.0, F-06 a 0.7.0, F-07 a 0.8.0 y DT-02 a 0.9.0)', () => {
+  it('R21: los tres endpoints de F-03 declaran el esquema bearer y sus respuestas (F-03 publicó 0.4.0; F-04 subió a 0.5.0, F-05 a 0.6.0, F-06 a 0.7.0, F-07 a 0.8.0 y DT-02 a 0.9.0 y F-10 a 0.10.0)', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.9.0');
+    expect(doc.info.version).toBe('0.10.0');
     const vs = doc.paths['/api/v1/encounters/{id}/vital-signs'].post;
     const sf = doc.paths['/api/v1/encounters/{id}/symptom-findings'].post;
     const cc = doc.paths['/api/v1/encounters/{id}/clinical-capture'].get;
@@ -118,9 +120,9 @@ describe('Contrato OpenAPI 0.9.x (e2e, sin base)', () => {
     expect(cc?.responses['200']).toBeDefined();
   });
 
-  it('R1: info.version es 0.9.0 (F-04 publicó 0.5.0) y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
+  it('R1: info.version es 0.10.0 (F-04 publicó 0.5.0) y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.9.0');
+    expect(doc.info.version).toBe('0.10.0');
     const path = doc.paths['/api/v1/encounters/{id}/triage-suggestions'];
     for (const op of [path.post, path.get]) {
       expect(op?.security).toEqual([{ bearer: [] }]);
@@ -384,9 +386,9 @@ describe('Contrato OpenAPI 0.9.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- F-05-api (0.6.0)
 
-  it('R16: info.version es 0.9.0 (F-05 publicó 0.6.0) y POST/GET /encounters/{id}/triage-decision declaran bearer, TriageDecisionDto y problem+json', () => {
+  it('R16: info.version es 0.10.0 (F-05 publicó 0.6.0) y POST/GET /encounters/{id}/triage-decision declaran bearer, TriageDecisionDto y problem+json', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.9.0');
+    expect(doc.info.version).toBe('0.10.0');
     const path = doc.paths['/api/v1/encounters/{id}/triage-decision'];
     for (const op of [path.post, path.get]) {
       expect(op?.security).toEqual([{ bearer: [] }]);
@@ -556,9 +558,9 @@ describe('Contrato OpenAPI 0.9.x (e2e, sin base)', () => {
     content: { 'application/problem+json': expect.any(Object) as object },
   };
 
-  it('R1: info.version es 0.9.0 y GET /queue declara bearer, QueueDto, siteId opcional y los tiempos máximos de la Res. 5596', () => {
+  it('R1: info.version es 0.10.0 y GET /queue declara bearer, QueueDto, siteId opcional y los tiempos máximos de la Res. 5596', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.9.0');
+    expect(doc.info.version).toBe('0.10.0');
     const op = doc.paths['/api/v1/queue'].get;
     expect(op?.security).toEqual([{ bearer: [] }]);
     expect(op?.responses['200']).toMatchObject({
@@ -695,9 +697,9 @@ describe('Contrato OpenAPI 0.9.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- F-07-api (0.8.0)
 
-  it('R5: info.version es 0.9.0 (F-07 publicó 0.8.0) y GET /reports/summary declara bearer, ReportSummaryDto, from y to obligatorios y siteId opcional', () => {
+  it('R5: info.version es 0.10.0 (F-07 publicó 0.8.0) y GET /reports/summary declara bearer, ReportSummaryDto, from y to obligatorios y siteId opcional', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.9.0');
+    expect(doc.info.version).toBe('0.10.0');
     const op = doc.paths['/api/v1/reports/summary'].get;
     expect(op?.security).toEqual([{ bearer: [] }]);
     expect(op?.responses['200']).toMatchObject({
@@ -803,9 +805,9 @@ describe('Contrato OpenAPI 0.9.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- DT-02-api (0.9.0)
 
-  it('R10: info.version es 0.9.0 y QueueItemDto.minutesSinceTriage es integer, nullable y requerido', () => {
+  it('R10: info.version es 0.10.0 y QueueItemDto.minutesSinceTriage es integer, nullable y requerido', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.9.0');
+    expect(doc.info.version).toBe('0.10.0');
     const item = schemaOf(doc, 'QueueItemDto');
     expect(item.properties?.minutesSinceTriage).toMatchObject({
       type: 'integer',
@@ -862,5 +864,71 @@ describe('Contrato OpenAPI 0.9.x (e2e, sin base)', () => {
     expect(text).toMatch(/Res\. 256 de 2016/);
     expect(text).toMatch(/I = 0/);
     expect(text).toMatch(/II = 30/);
+  });
+
+  // ---------------------------------------------------------------- F-10-api (0.10.0)
+
+  it('R1: info.version es 0.10.0 y GET /patient/queue-position declara bearer, QueuePositionDto, ningún parámetro y 400/401/403 problem+json', () => {
+    const doc = buildOpenApiDocument(app);
+    expect(doc.info.version).toBe('0.10.0');
+    const op = doc.paths['/api/v1/patient/queue-position'].get;
+    expect(op?.security).toEqual([{ bearer: [] }]);
+    expect(op?.parameters ?? []).toEqual([]);
+    expect(op?.responses['200']).toMatchObject({
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/QueuePositionDto' },
+        },
+      },
+    });
+    for (const code of ['400', '401', '403']) {
+      expect([code, op?.responses[code]]).toEqual([
+        code,
+        expect.objectContaining(isProblem),
+      ]);
+    }
+  });
+
+  it('R6: QueuePositionDto solo tiene fase, posición, personas delante, rango, base y serverNow: ningún id ni nivel', () => {
+    const doc = buildOpenApiDocument(app);
+    const dto = schemaOf(doc, 'QueuePositionDto');
+    expect(Object.keys(dto.properties ?? {}).sort()).toEqual([
+      'aheadCount',
+      'estimate',
+      'estimateBasis',
+      'phase',
+      'position',
+      'serverNow',
+    ]);
+    expect(dto.properties?.phase).toMatchObject({
+      enum: ['NO_ACTIVE', 'WAITING_TRIAGE', 'WAITING_CARE', 'CALLED', 'DONE'],
+    });
+    expect(dto.properties?.estimateBasis).toMatchObject({
+      enum: ['RECENT_THROUGHPUT', 'INSUFFICIENT_DATA'],
+      nullable: true,
+    });
+    expect(
+      Object.keys(schemaOf(doc, 'WaitEstimateDto').properties ?? {}).sort(),
+    ).toEqual(['maxMinutes', 'minMinutes']);
+  });
+
+  it('R7: GET /patient/queue-position/stream declara bearer, text/event-stream, el evento position, el latido y 400/401/403 problem+json', () => {
+    const doc = buildOpenApiDocument(app);
+    const op = doc.paths['/api/v1/patient/queue-position/stream'].get;
+    expect(op?.security).toEqual([{ bearer: [] }]);
+    expect(op?.parameters ?? []).toEqual([]);
+    expect(op?.responses['200']).toMatchObject({
+      content: { 'text/event-stream': expect.any(Object) as object },
+    });
+    expect(op?.description).toMatch(/position/);
+    expect(op?.description).toMatch(/QueuePositionDto/);
+    expect(op?.description).toMatch(/15 s/);
+    expect(op?.description).toMatch(/DONE/);
+    for (const code of ['400', '401', '403']) {
+      expect([code, op?.responses[code]]).toEqual([
+        code,
+        expect.objectContaining(isProblem),
+      ]);
+    }
   });
 });

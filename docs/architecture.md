@@ -17,6 +17,7 @@ src/
 │   ├── auth/  users/  tenancy/
 │   ├── patients/  encounters/  triage/  ai/
 │   ├── queue/  reports/  audit/
+│   ├── patient-queue/
 └── scripts/                # CLI: users-create.ts (npm run users:create), sites-create.ts (npm run sites:create)
 prisma/
 ├── schema.prisma           # provider postgresql, schemas = ["asclepio"] (Prisma 7: sin URLs aquí)
@@ -43,6 +44,7 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 | `ai`         | Sugerencia: `LlmClient` (`GroqAdapter`, `OpenRouterAdapter`), `TriagePromptBuilder`, `TriageResponseValidator`, `SafetyGuards`, `TriageAdvisor` | `triage_suggestions`                                                                     | `encounters` (solo lectura de la captura), `audit`, `users` (nombre del responsable) |
 | `queue`      | Cola priorizada (F-06: solo lectura con `listActiveForQueue`; no usa `triage`)                                                                  | —                                                                                        | `encounters`, `triage`                                                     |
 | `reports`    | Tiempos, cumplimiento, concordancia y CSV (F-07: solo lectura; audita la descarga del CSV)                                                      | —                                                                                        | `encounters`, `triage`, `ai`, `audit` (y la constante pura `queue.rules`)  |
+| `patient-queue` | Posición del paciente en la fila y espera estimada: instantánea y stream SSE (F-10: solo lectura; ADR 0009) | — | `encounters` (y la función pura `queue.rules`) |
 | `audit`      | Escritura append-only de `audit_log`                                                                                                            | `audit_log`                                                                              | —                                                                          |
 
 ## Dependencias
@@ -122,6 +124,15 @@ scripts/                    # test-int.sh y su guardián assert-local-db.mjs (ab
 - Después aplica funciones puras: `report-period.ts` (periodo en Bogotá, −05:00 fijo; 400/422), `report-stats.ts` (mediana, p90 por rango más cercano, porcentajes y kappa de Cohen ponderado cuadrático), `report-rows.ts` (`buildRows`: una fila por atención, con la sugerencia decidida o, si no la hay, la vigente; `summarize`) y `report-csv.ts` (`toCsv`: RFC 4180, CRLF, horas `-05:00` y neutralización de fórmulas).
 - El cumplimiento del nivel II se mide de `triaged_at` a `IN_CARE` (Res. 256 de 2016) con el `30` **importado** de `queue/queue.rules.ts` (`MAX_WAIT_MINUTES_BY_LEVEL`). No se duplica.
 - La descarga del CSV se audita con `REPORT_EXPORTED` mediante `AuditService`. Los logs solo llevan recuentos. Formato del CSV: docs/reports-csv.md (interno).
+
+## Posición del paciente (F-10)
+
+- `patient-queue` no tiene tablas y solo es para el paciente (`@PatientOnly()`). `PatientQueueController` expone `GET /patient/queue-position` (instantánea `QueuePositionDto`) y `@Sse() GET /patient/queue-position/stream` (`text/event-stream`, ADR 0009). Ninguno admite parámetros (`PatientQueueQueryDto` vacío + `forbidNonWhitelisted` → 400). El paciente y el tenant salen solo de `pid`/`tid` del token.
+- `PatientQueueService.compute`: **`EncountersService.findActiveForPatient(tenantId, patientId)`** → `listActiveForQueue(tenantId, siteId)` de su sede → **`buildQueue`** (la misma función pura de F-06/DT-02) → `positionOf` → **`EncountersService.countPhaseExits(tenantId, siteId, fase, since, until)`** (clasificaciones o pasos a `IN_CARE` en las últimas 4 h) → `estimateWait`. Un único `Clock.now()` (`serverNow`).
+- `estimate.rules.ts` (puro): `ESTIMATE` (PA-F10-1, **PROVISIONAL**: 240 min, 5 salidas, ×0,5/×1,5, redondeo a 5 min), `positionOf` y `estimateWait`. El DTO del paciente nunca lleva ids, niveles (tampoco el propio) ni datos de otros pacientes.
+- Bus de cambios: **`EncountersService.changes$`** (`Subject` de rxjs, `{ tenantId, siteId }`). `createInTx`, `transition` y `recordTriage` registran el cambio en su transacción y **`EncountersService.inTransaction(fn)`** lo publica solo tras el commit; la usan `createDirect`, `cancel`, `startCare`/`close`, `PreRegistrationsService.confirm` y `TriageDecisionsService.decide`. Techo: un solo proceso (con varias instancias, `LISTEN/NOTIFY`).
+- `position-stream.ts` (puro sobre rxjs): `merge(inicio, cambios de la sede con debounce de 1 s, intervalo de 15 s)` → `switchMap(compute)` → evento `position` solo si la instantánea cambió (sin `serverNow`), y si no, en el intervalo, el comentario `: ping`. Termina tras `DONE` (la atención con la que se abrió ya no es la activa) o al vencer el token (`exp`). Tiempos en `PATIENT_QUEUE_TIMING`.
+- Los logs solo llevan `tenantId` y la fase.
 
 ## Scripts y pruebas
 

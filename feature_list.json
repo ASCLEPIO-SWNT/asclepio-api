@@ -223,6 +223,50 @@
       ],
       "sdd": false,
       "status": "pending"
+    },
+    {
+      "id": "F-10-api",
+      "global_id": "F-10",
+      "name": "patient_queue_position",
+      "title": "Posición en la fila y espera estimada del paciente (SSE)",
+      "description": "Módulo patient-queue: instantánea y stream SSE de la posición del paciente (buildQueue por sede) y estimación por throughput reciente con fallback INSUFFICIENT_DATA.",
+      "depends_on": [
+        "F-06-api",
+        "DT-02-api"
+      ],
+      "contract": {
+        "changes": true,
+        "version": "0.10.0"
+      },
+      "touches_db": false,
+      "acceptance": [
+        "Ver docs/product/features/F-10.md (F-10.AC1–AC4, AC6)"
+      ],
+      "sdd": true,
+      "status": "done"
+    },
+    {
+      "id": "F-11-api",
+      "global_id": "F-11",
+      "name": "symptom_interview",
+      "title": "Entrevista de síntomas: persistencia, IA v2, prioridad y fallback en servidor",
+      "description": "Campo interview en el prerregistro, columnas symptom_interview y red_flags, copia a la atención, snapshot triage-v2, prioridad por señal de alarma y endpoint next-question.",
+      "depends_on": [
+        "F-10-api",
+        "F-02-api",
+        "F-04-api",
+        "F-06-api"
+      ],
+      "contract": {
+        "changes": true,
+        "version": "0.11.0"
+      },
+      "touches_db": true,
+      "acceptance": [
+        "Ver docs/product/features/F-11.md (F-11.AC2, AC3, AC5–AC7)"
+      ],
+      "sdd": true,
+      "status": "spec_ready"
     }
   ]
 }

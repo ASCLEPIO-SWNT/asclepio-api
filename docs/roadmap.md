@@ -16,6 +16,8 @@ Mapa de las features globales `F-0X` a sus slices por repo. El **estado vivo** d
 | F-07 | Reportes de tiempos, cumplimiento, concordancia y CSV | F-07-api | F-07-web | — | sí | [F-07](product/features/F-07.md) |
 | F-08 | Dictado del motivo en el dispositivo | — | — | F-08-mobile | sí | [F-08](product/features/F-08.md) |
 | F-09 | Datos sintéticos y guion de demo | F-09-api | — | — | no | [F-09](product/features/F-09.md) |
+| F-10 | Posición en la fila y espera del paciente, en vivo (SSE) | F-10-api | — | F-10-mobile | sí | [F-10](product/features/F-10.md) |
+| F-11 | Entrevista de síntomas con IA en el teléfono | F-11-api | F-11-web | F-11-mobile | sí | [F-11](product/features/F-11.md) |
 
 ## Orden y dependencias
 
