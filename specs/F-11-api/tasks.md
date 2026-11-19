@@ -34,6 +34,6 @@
   - logger sin contenido.
 
   (R11, R12, R13, R14, R15)
-- [ ] T9 e2e: el 429 con `Retry-After` y la matriz de tokens 401/403, más 400 y 503 en `problem+json`. (R16, R17)
+- [x] T9 e2e: el 429 con `Retry-After` y la matriz de tokens 401/403, más 400 y 503 en `problem+json`. (R16, R17)
 - [ ] T10 Viñetas de entrevista en `npm run ai:eval` (manual, fuera de `init.sh`).
 - [ ] T11 `npm run openapi:export` y `contract.version = 0.11.0`.
