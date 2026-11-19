@@ -36,7 +36,8 @@ export const LLM_CONFIG = Symbol('LLM_CONFIG');
     TriagePromptBuilder,
     TriageAdvisor,
   ],
-  exports: [TriageAdvisor, GROQ_CLIENT, OPENROUTER_CLIENT],
+  // F-11-api: interview usa los mismos puertos del LLM y el presupuesto total para next-question.
+  exports: [TriageAdvisor, GROQ_CLIENT, OPENROUTER_CLIENT, ADVISOR_BUDGET],
 })
 export class AiCoreModule {}
 
