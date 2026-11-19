@@ -43,10 +43,14 @@ Glosario de la spec:
 - **R12** (Por evento) Cuando la salida del LLM no pase el validador, el sistema deberá reintentar una vez. Si vuelve a fallar, o si el LLM excede el timeout, deberá responder con la pregunta fija de la primera dimensión no cubierta. Si ya están cubiertas todas, deberá responder `DONE`. (→ F-11.AC2)
 - **R13** (Por evento) Cuando el LLM devuelva `redFlagSuspected = true`, el sistema deberá responder `RED_FLAG` con las señales de las reglas o, si no hay ninguna, con la lista vacía. (→ F-11.AC3)
   - Enmienda (humano, 2026-11-18): esto aplica a toda salida con el esquema válido, **aunque la pregunta no pase el validador**. La pregunta rechazada nunca se devuelve. El modelo solo puede subir la alerta.
+  - Enmienda 2 (humano, 2026-11-18, tras `ai:eval`): con 0 turnos respondidos, el sistema deberá ignorar `redFlagSuspected` del LLM y seguir con la pregunta. Las reglas de alarma sobre el motivo se siguen aplicando antes, y en el primer turno escalan igual.
 - **R14** (Por evento) Cuando los turnos recibidos sean 5, o el LLM devuelva `done = true` con ≥3 dimensiones respondidas, el sistema deberá responder `DONE`. (→ F-11.AC1) (PA-F11-4)
+  - Enmienda (humano, 2026-11-18, tras `ai:eval`): `done = true` del LLM solo deberá aceptarse si, además de ≥3 dimensiones respondidas, está cubierta `ONSET` y, cuando el motivo o alguna respuesta mencionen dolor (`dolor`, `duele`, `doler`, normalizado), también `LOCATION`. Si falta alguna, el sistema deberá responder con la pregunta fija de la primera dimensión obligatoria no cubierta. Con 5 turnos se sigue respondiendo `DONE`.
 - **R15** (Ubicuo) El sistema deberá enviar al LLM los textos del endpoint pasados por `redact()` con el nombre y el documento del paciente del token, y no deberá persistir en base de datos ni escribir en logs el contenido de la petición ni de la respuesta. (→ F-11.AC5) (RNF-04, RNF-05)
 - **R16** (No deseado) Si un mismo paciente supera 30 peticiones a `next-question` en 10 min, entonces el sistema deberá responder 429 con `Retry-After`. (→ F-11.AC5)
 - **R17** (No deseado) Si un token de personal llega a `next-question`, entonces el sistema deberá responder 403. Sin token válido deberá responder 401. Ante un cuerpo inválido deberá responder 400. Si ambos proveedores del LLM fallan, deberá responder 503. Todo en `application/problem+json`. (→ F-11.AC5)
+
+- **R18** (Ubicuo) El sistema deberá usar el prompt `interview-v2`, que pide `redFlagSuspected = true` solo ante síntomas concretos descritos por el paciente, nunca ante un motivo vago, y que no proponga terminar sin preguntar por el inicio y, si hay dolor, la localización. (→ F-11.AC2, F-11.AC3) (enmienda del humano, 2026-11-18)
 
 ## Preguntas abiertas
 Resueltas el 2026-11-18 por el humano («aprobado» en el chat): se aceptan todas las propuestas.

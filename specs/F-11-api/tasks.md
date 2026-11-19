@@ -37,3 +37,5 @@
 - [x] T9 e2e: el 429 con `Retry-After` y la matriz de tokens 401/403, más 400 y 503 en `problem+json`. (R16, R17)
 - [x] T10 Viñetas de entrevista en `npm run ai:eval` (manual, fuera de `init.sh`). Código y datos hechos; **ejecución manual pendiente por el humano** (nunca se ejecutó: llama al LLM real).
 - [x] T11 `npm run openapi:export` y `contract.version = 0.11.0`.
+
+- [ ] T12 (enmienda del humano, 2026-11-18, tras `ai:eval`) Pruebas `R13:` (0 turnos → se ignora `redFlagSuspected`), `R14:` (`done` sin `ONSET`, o sin `LOCATION` con dolor → pregunta fija) y `R18:` (prompt `interview-v2`), más la implementación en `interview.rules.ts`, `interview.service.ts` y el prompt. Actualizar las viñetas de `ai:eval` si dependen de la versión. (R13, R14, R18)
