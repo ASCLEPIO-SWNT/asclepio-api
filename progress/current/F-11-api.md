@@ -25,3 +25,4 @@
 - **Nuevo SHA-256 del fixture (para F-11-mobile):** `2d75bdbd0ba08e8e1c9d29ccc40c94ab8c9ca003c34ee8c642409c4da83fe6b7`.
 - Títulos obsoletos "0.10.0" de `contract.e2e-spec.ts` corregidos.
 - **Abierta para el humano o spec_author (observación 1, no bloqueante):** ¿honrar `redFlagSuspected` de una salida con esquema válido aunque el texto de la pregunta no pase el validador? Hoy se reintenta y puede acabar en la pregunta fija.
+- **Decisión del humano (2026-11-18), observación 1:** se escala con `redFlagSuspected = true` de una salida con el esquema válido aunque la pregunta no pase el validador (enmienda en R13). Pendiente: la misma enmienda en R12 de F-11-mobile al empezar ese slice.
