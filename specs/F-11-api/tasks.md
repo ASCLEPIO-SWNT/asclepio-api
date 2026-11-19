@@ -15,7 +15,7 @@
   - `R3:` retrocompatible sin `interview`.
 
   (R1, R2, R3)
-- [ ] T4 Integración + `PreRegistrationsService`:
+- [x] T4 Integración + `PreRegistrationsService`:
   - persistencia;
   - unión de señales en el servidor (`R4:` el cliente envía `[]` con "me desmayé" → `LOSS_OF_CONSCIOUSNESS`);
   - copia al confirmar (`R5:`).

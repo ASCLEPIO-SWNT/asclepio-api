@@ -12,6 +12,12 @@ import type {
 import { Clock } from '../../common/clock/clock.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { isUuid } from '../../common/uuid.js';
+import type { SymptomInterviewDto } from '../interview/dto/interview.dto.js';
+import {
+  detectRedFlags,
+  mergeRedFlags,
+  type RedFlag,
+} from '../interview/interview.rules.js';
 import { AuditService } from '../audit/audit.service.js';
 import { PatientAccountsService } from '../auth/patient-accounts.service.js';
 import { PatientsService } from '../patients/patients.service.js';
@@ -44,6 +50,38 @@ const ACTIVE_ON_CONFIRM = 'El paciente ya tiene una atención activa.';
 const IDENTITY_REQUIRED =
   'Para confirmar la llegada hay que verificar la identidad del paciente (identityVerified: true).';
 export const PATIENT_LIST_LIMIT = 20;
+
+/** Entrevista como objeto JSON plano (sin las instancias del ValidationPipe), tal como la envió la app (R1). */
+function toInterviewJson(i: SymptomInterviewDto) {
+  return {
+    engine: i.engine,
+    modelId: i.modelId,
+    turns: i.turns.map((t) => ({
+      dimension: t.dimension,
+      question: t.question,
+      answer: t.answer,
+    })),
+    redFlags: [...i.redFlags],
+    endedBy: i.endedBy,
+  };
+}
+
+/**
+ * Señales del pre-registro (R4, D3): las del cliente unidas a las de las reglas sobre el motivo y las respuestas. El
+ * servidor solo añade; sin entrevista se revisa igualmente el motivo.
+ */
+export function serverRedFlags(
+  chiefComplaintText: string,
+  interview?: SymptomInterviewDto,
+): RedFlag[] {
+  const answers = (interview?.turns ?? []).flatMap((t) =>
+    t.answer === null ? [] : [t.answer],
+  );
+  return mergeRedFlags(
+    interview?.redFlags ?? [],
+    detectRedFlags(chiefComplaintText, ...answers),
+  );
+}
 
 const PATIENT_VIEW_SELECT = {
   id: true,
@@ -129,6 +167,11 @@ export class PreRegistrationsService {
             status: 'PENDING',
             preRegisteredAt: now,
             expiresAt: expiresAtFor(now),
+            // F-11 (R1, R3, R4): sin entrevista, symptom_interview queda NULL.
+            ...(dto.interview
+              ? { symptomInterview: toInterviewJson(dto.interview) }
+              : {}),
+            redFlags: serverRedFlags(dto.chiefComplaintText, dto.interview),
           },
           select: { id: true },
         });
@@ -275,6 +318,8 @@ export class PreRegistrationsService {
                 expiresAt: true,
                 chiefComplaintText: true,
                 complaintSource: true,
+                symptomInterview: true,
+                redFlags: true,
               },
             })
           : null;
@@ -304,6 +349,9 @@ export class PreRegistrationsService {
             patientId: pre.patientId,
             chiefComplaintText: pre.chiefComplaintText,
             complaintSource: pre.complaintSource,
+            // F-11 (R5): la entrevista y las señales viajan con el motivo, en la misma transacción.
+            symptomInterview: pre.symptomInterview,
+            redFlags: pre.redFlags,
             origin: 'PRE_REGISTRATION',
             registeredBy: principal.id,
             now,

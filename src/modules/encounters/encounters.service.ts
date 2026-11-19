@@ -127,6 +127,9 @@ export interface NewEncounter {
   /** arrival_at y occurred_at de los dos eventos (D22). */
   now: Date;
   preRegistrationId?: string;
+  /** Entrevista de síntomas copiada del pre-registro (F-11-api, R5); las atenciones DIRECT no la llevan. */
+  symptomInterview?: Prisma.JsonValue | null;
+  redFlags?: string[];
 }
 
 const SUMMARY_SELECT = {
@@ -230,6 +233,10 @@ export class EncountersService {
         chiefComplaintText: n.chiefComplaintText,
         complaintSource: n.complaintSource,
         registeredBy: n.registeredBy,
+        ...(n.symptomInterview != null
+          ? { symptomInterview: n.symptomInterview }
+          : {}),
+        redFlags: n.redFlags ?? [],
       },
       select: { id: true },
     });
