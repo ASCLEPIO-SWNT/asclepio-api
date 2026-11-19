@@ -74,4 +74,4 @@ Detalle y justificación en `progress/current/F-11-api.md`, sección "Interpreta
 ## R13 enmendado (decisión del humano sobre la observación 1)
 - `validateQuestion` devuelve `redFlagSuspected` en el rechazo **solo** si el esquema era válido y falló el texto de la pregunta (longitud, "?", dimensión repetida o patrón prohibido). En ese caso `InterviewAdvisor` responde `RED_FLAG` (`redFlags: []` porque las reglas ya no hallaron señales), sin reintento y sin devolver la pregunta rechazada. Con el esquema inválido, la sospecha no cuenta.
 - Pruebas: `interview.rules.spec.ts` :: `R13: si el esquema es válido pero la pregunta no, el rechazo informa redFlagSuspected…`; `test/f11-next-question.e2e-spec.ts` :: `R13: una salida con esquema válido y redFlagSuspected = true escala a RED_FLAG aunque la pregunta no pase el validador…` y `R13: con el esquema inválido, redFlagSuspected no cuenta…`.
-- Nota: en disco, `specs/F-11-api/requirements.md` (R13) todavía tiene el texto original. La enmienda la redacta spec_author o el leader.
+- La enmienda de R13 está en `specs/F-11-api/requirements.md` (cambio del leader, sin commit; no lo incluyo en mis commits).
