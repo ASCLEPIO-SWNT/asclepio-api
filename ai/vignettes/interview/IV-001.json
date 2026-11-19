@@ -1,0 +1,22 @@
+{
+  "id": "IV-001",
+  "title": "Cefalea de varios días",
+  "chief_complaint_text": "me duele la cabeza hace días",
+  "scripted_answers": [
+    "Empezó hace cuatro días",
+    "Es todo el día, peor en la tarde",
+    "Como un 6 de 10",
+    "En la frente y las sienes",
+    "Un poco de cansancio",
+    "Nada más"
+  ],
+  "expected": {
+    "red_flag": false,
+    "must_cover": [
+      "ONSET",
+      "INTENSITY"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

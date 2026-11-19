@@ -1,0 +1,22 @@
+{
+  "id": "IV-004",
+  "title": "Mareo",
+  "chief_complaint_text": "mareo",
+  "scripted_answers": [
+    "Esta mañana al levantarme",
+    "Unos minutos cada vez",
+    "Moderado",
+    "Siento que todo da vueltas",
+    "Náuseas",
+    "No sé"
+  ],
+  "expected": {
+    "red_flag": false,
+    "must_cover": [
+      "ONSET",
+      "ASSOCIATED"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

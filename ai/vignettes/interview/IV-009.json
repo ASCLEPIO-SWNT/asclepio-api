@@ -1,0 +1,22 @@
+{
+  "id": "IV-009",
+  "title": "Caída",
+  "chief_complaint_text": "me caí",
+  "scripted_answers": [
+    "Hace una hora, en la escalera",
+    "El dolor sigue",
+    "Como un 6",
+    "En la muñeca izquierda",
+    "Está hinchada",
+    "No"
+  ],
+  "expected": {
+    "red_flag": false,
+    "must_cover": [
+      "LOCATION",
+      "INTENSITY"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

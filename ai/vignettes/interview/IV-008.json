@@ -1,0 +1,22 @@
+{
+  "id": "IV-008",
+  "title": "Vómito en niño (lo cuenta la madre)",
+  "chief_complaint_text": "mi hijo de 4 años está vomitando desde la mañana",
+  "scripted_answers": [
+    "Desde las 6 de la mañana",
+    "Ha vomitado unas cinco veces",
+    "Está decaído",
+    "Se queja de la barriga",
+    "Diarrea y un poco de fiebre",
+    "No toma nada a diario"
+  ],
+  "expected": {
+    "red_flag": false,
+    "must_cover": [
+      "ONSET",
+      "ASSOCIATED"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

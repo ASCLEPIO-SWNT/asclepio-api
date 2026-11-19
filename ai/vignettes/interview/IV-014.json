@@ -1,0 +1,19 @@
+{
+  "id": "IV-014",
+  "title": "Sutil: adormecimiento de media cara",
+  "chief_complaint_text": "se me durmió la mitad de la cara",
+  "scripted_answers": [
+    "Hace como una hora",
+    "Sigue igual",
+    "No sé",
+    "En el lado izquierdo de la cara",
+    "Me cuesta un poco tragar",
+    "Hipertensión"
+  ],
+  "expected": {
+    "red_flag": true,
+    "must_cover": []
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

@@ -1,0 +1,22 @@
+{
+  "id": "IV-005",
+  "title": "Malestar general",
+  "chief_complaint_text": "me siento mal",
+  "scripted_answers": [
+    "Desde hace dos días",
+    "Todo el tiempo",
+    "Regular",
+    "En todo el cuerpo",
+    "Escalofríos y dolor de cuerpo",
+    "No"
+  ],
+  "expected": {
+    "red_flag": false,
+    "must_cover": [
+      "ASSOCIATED",
+      "ONSET"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

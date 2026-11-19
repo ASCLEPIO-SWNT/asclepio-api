@@ -1,0 +1,14 @@
+{
+  "id": "IV-010",
+  "title": "Dolor torácico irradiado al brazo",
+  "chief_complaint_text": "dolor en el pecho que va al brazo",
+  "scripted_answers": [
+    "Hace media hora"
+  ],
+  "expected": {
+    "red_flag": true,
+    "must_cover": []
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

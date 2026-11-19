@@ -1,0 +1,14 @@
+{
+  "id": "IV-011",
+  "title": "Dificultad respiratoria",
+  "chief_complaint_text": "no puedo respirar bien",
+  "scripted_answers": [
+    "Desde hace una hora"
+  ],
+  "expected": {
+    "red_flag": true,
+    "must_cover": []
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}
