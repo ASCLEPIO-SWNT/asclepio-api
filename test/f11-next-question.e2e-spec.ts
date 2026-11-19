@@ -219,6 +219,31 @@ describe('F-11: next-question con el LLM falso (e2e, sin base)', () => {
     expect(res.body).toEqual({ kind: 'RED_FLAG', redFlags: [] });
   });
 
+  it('R13: una salida con esquema válido y redFlagSuspected = true escala a RED_FLAG aunque la pregunta no pase el validador, sin devolver esa pregunta', async () => {
+    groq.script(
+      out({ redFlagSuspected: true, question: '¿Sabes que es urgente?' }),
+    );
+    const { res } = await ask({
+      turns: [turn('ONSET', 'raro, me siento mal')],
+    });
+    expect(res.body).toEqual({ kind: 'RED_FLAG', redFlags: [] });
+    expect(res.text).not.toContain('urgente');
+    // Sin reintento: la sospecha basta.
+    expect(groq.requests).toHaveLength(1);
+  });
+
+  it('R13: con el esquema inválido, redFlagSuspected no cuenta (se reintenta y se usa la pregunta fija)', async () => {
+    groq.script(out({ redFlagSuspected: true, extra: 1 }), {
+      content: 'no es JSON',
+    });
+    const { res } = await ask({});
+    expect(res.body).toEqual({
+      kind: 'QUESTION',
+      dimension: 'ONSET',
+      question: FIXED_QUESTIONS.ONSET,
+    });
+  });
+
   it('R14: con 5 turnos responde DONE sin llamar al LLM', async () => {
     const { res } = await ask({
       turns: ['ONSET', 'DURATION', 'INTENSITY', 'LOCATION', 'HISTORY'].map(

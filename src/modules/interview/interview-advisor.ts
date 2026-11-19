@@ -114,6 +114,16 @@ export class InterviewAdvisor {
       }
       const checked = validateQuestion(call.content, turns);
       outputs.push(checked.valid ? 'VALID' : 'INVALID');
+      // R13 (enmendado por el humano): esquema válido con redFlagSuspected → RED_FLAG aunque la pregunta no pase el
+      // validador; la pregunta rechazada nunca se devuelve.
+      if (!checked.valid && checked.redFlagSuspected) {
+        return {
+          result: { kind: 'RED_FLAG', redFlags: [] },
+          source: 'LLM',
+          llmCalls,
+          outputs,
+        };
+      }
       if (checked.valid) {
         return {
           result: this.fromOutput(checked.output, turns),

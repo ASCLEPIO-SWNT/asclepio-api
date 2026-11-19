@@ -209,7 +209,9 @@ export const QUESTION_OUTPUT_SCHEMA = Object.freeze({
 });
 
 export type QuestionValidation =
-  { valid: true; output: QuestionOutput } | { valid: false; reason: string };
+  | { valid: true; output: QuestionOutput }
+  /** redFlagSuspected solo si el esquema era válido y falló el texto de la pregunta (R13 enmendado). */
+  | { valid: false; reason: string; redFlagSuspected?: boolean };
 
 const OUTPUT_KEYS = ['dimension', 'done', 'question', 'redFlagSuspected'];
 
@@ -243,19 +245,25 @@ export function validateQuestion(
   }
   if (!isDimension(o.dimension)) return { valid: false, reason: 'DIMENSION' };
   if (typeof o.question !== 'string') return { valid: false, reason: 'TYPES' };
+  // Esquema válido: desde aquí los rechazos son del texto y conservan la sospecha (R13 enmendado).
+  const textFail = (reason: string): QuestionValidation => ({
+    valid: false,
+    reason,
+    redFlagSuspected: o.redFlagSuspected as boolean,
+  });
   const question = o.question.trim();
   if (!question || question.length > INTERVIEW_LIMITS.llmQuestionMax) {
-    return { valid: false, reason: 'LENGTH' };
+    return textFail('LENGTH');
   }
   if (!question.endsWith('?') || question.split('?').length !== 2) {
-    return { valid: false, reason: 'QUESTION_MARK' };
+    return textFail('QUESTION_MARK');
   }
   if (turns.some((t) => t.dimension === o.dimension)) {
-    return { valid: false, reason: 'REPEATED_DIMENSION' };
+    return textFail('REPEATED_DIMENSION');
   }
   const norm = normalizeText(question);
   if (FORBIDDEN.some((re) => re.test(norm))) {
-    return { valid: false, reason: 'FORBIDDEN' };
+    return textFail('FORBIDDEN');
   }
   return {
     valid: true,

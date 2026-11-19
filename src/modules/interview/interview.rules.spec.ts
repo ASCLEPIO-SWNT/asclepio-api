@@ -160,6 +160,22 @@ describe('interview.rules (F-11-api)', () => {
       ).toBe(true);
     });
 
+    it('R13: si el esquema es válido pero la pregunta no, el rechazo informa redFlagSuspected (y nunca la pregunta)', () => {
+      const r = validateQuestion(
+        output({ redFlagSuspected: true, question: '¿Es grave?' }),
+        [],
+      );
+      expect(r).toEqual({
+        valid: false,
+        reason: 'FORBIDDEN',
+        redFlagSuspected: true,
+      });
+      expect(validateQuestion('{"redFlagSuspected": true}', [])).toEqual({
+        valid: false,
+        reason: 'KEYS',
+      });
+    });
+
     it('R13: conserva redFlagSuspected y done de la salida válida', () => {
       const r = validateQuestion(
         output({ done: true, redFlagSuspected: true }),
