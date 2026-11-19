@@ -248,6 +248,10 @@ model Encounter {
   finalLevel         Int?            @map("final_level") @db.SmallInt
   triagedAt          DateTime?       @map("triaged_at") @db.Timestamptz(6)
   triagedBy          String?         @map("triaged_by") @db.Uuid
+  /// Entrevista de síntomas copiada del pre-registro al confirmar (F-11-api, R5). Respuestas del paciente, no verificadas.
+  symptomInterview   Json?           @map("symptom_interview")
+  /// Señales de alarma (F-11-api, D2): las del cliente unidas a las de las reglas del servidor. CHECK con los valores.
+  redFlags           String[]        @default([]) @map("red_flags")
   createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -290,6 +294,10 @@ model PreRegistration {
   resolvedBy         String?               @map("resolved_by") @db.Uuid
   encounterId        String?               @unique @map("encounter_id") @db.Uuid
   rejectionReason    String?               @map("rejection_reason")
+  /// Entrevista de síntomas de la app (F-11-api, R1): { engine, modelId, turns, redFlags, endedBy }; NULL sin entrevista.
+  symptomInterview   Json?                 @map("symptom_interview")
+  /// Señales de alarma (F-11-api, R1, R4, D2): las del cliente unidas a las de las reglas del servidor.
+  redFlags           String[]              @default([]) @map("red_flags")
   updatedAt          DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // F-02 corrección 1: todas RESTRICT (ver Encounter).
