@@ -3,7 +3,7 @@
 > Orden estricto: primero la prueba `R<n>: …` y luego el código. La migración va primero y aislada. Nada se ejecuta contra Supabase.
 
 - [x] T1 Migración `--create-only` (Docker local): `symptom_interview` y `red_flags` con su CHECK en `pre_registrations` y en `encounters`. Actualizar `schema.prisma` y `docs/data-model.md`. (R1, R5)
-- [ ] T2 Prueba + `modules/interview/interview.rules.ts`:
+- [x] T2 Prueba + `modules/interview/interview.rules.ts`:
   - fixture `test/fixtures/red-flag-cases.json`, con su hash fijado en la prueba;
   - `detectRedFlags`;
   - `validateQuestion`, con los patrones prohibidos, la forma, el "?" y la dimensión repetida;
