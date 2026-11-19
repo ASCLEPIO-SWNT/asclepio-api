@@ -82,6 +82,8 @@ export interface ActiveEncounterForQueue {
   arrivalAt: Date;
   /** Hora de la decisión de triage (F-05); la cola cuenta desde ella la alerta y el orden de triaged (DT-02-api). */
   triagedAt: Date | null;
+  /** red_flags no vacío (F-11-api, R8): la cola prioriza la espera de triage. Sin exponer cuáles. */
+  hasRedFlags: boolean;
   patient: {
     fullName: string | null;
     /** Fecha civil YYYY-MM-DD. */
@@ -653,6 +655,7 @@ export class EncountersService {
         finalLevel: true,
         arrivalAt: true,
         triagedAt: true,
+        redFlags: true,
       },
     });
     if (!rows.length) return [];
@@ -676,6 +679,7 @@ export class EncountersService {
         finalLevel: r.finalLevel,
         arrivalAt: r.arrivalAt,
         triagedAt: r.triagedAt,
+        hasRedFlags: r.redFlags.length > 0,
         patient: {
           fullName: p?.fullName ?? null,
           birthDate: p?.birthDate ?? null,

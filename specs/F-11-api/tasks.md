@@ -22,7 +22,7 @@
 
   (R1, R4, R5)
 - [x] T5 Integración + `EncounterDto` y `PendingPreRegistrationDto` con `symptomInterview` y `redFlags`, y el orden de la bandeja. (R6, R7)
-- [ ] T6 Prueba + `buildQueue` y `listActiveForQueue` con `hasRedFlags`, y el orden de `waitingTriage`. Una integración comprueba que F-10 hereda la posición. (R8)
+- [x] T6 Prueba + `buildQueue` y `listActiveForQueue` con `hasRedFlags`, y el orden de `waitingTriage`. Una integración comprueba que F-10 hereda la posición. (R8)
 - [ ] T7 Prueba + `triage-input.ts` v2 (`follow_up` redactado, `patient_reported_red_flags`, sin PII), `PROMPT_VERSION = 'triage-v2'` y las guards intactas. Actualizar las viñetas de `vignette-eval`. (R9, R10)
 - [ ] T8 e2e con el LLM falso + `InterviewService`/`Controller` `next-question`:
   - las tres respuestas (`QUESTION`, `DONE`, `RED_FLAG`);

@@ -28,6 +28,8 @@ export interface QueueRow {
   arrivalAt: Date;
   /** Hora de la decisión de triage; null fuera de TRIAGED/IN_CARE (o por una escritura fuera de la API, R8). */
   triagedAt: Date | null;
+  /** red_flags no vacío (F-11-api, R8): prioriza en waitingTriage. */
+  hasRedFlags: boolean;
   patient: {
     fullName: string | null;
     /** Fecha civil YYYY-MM-DD. */
@@ -55,6 +57,7 @@ export interface QueueItem {
   minutesSinceTriage: number | null;
   maxWaitMinutes: number | null;
   overdue: boolean;
+  hasRedFlags: boolean;
   patient: QueuePatient;
 }
 
@@ -127,6 +130,7 @@ function toItem(r: QueueRow, now: Date, today: string): QueueItem {
     overdue:
       triagedAt !== null &&
       isOverdue(level, now.getTime() - triagedAt.getTime()),
+    hasRedFlags: r.hasRedFlags,
     patient: {
       initials: initials(p.fullName),
       ageYears: p.birthDate
@@ -149,11 +153,15 @@ const byClassifiedFirst = (a: QueueItem, b: QueueItem) =>
 /** Más tiempo desde la clasificación primero (R5 de DT-02-api, PA-DT02-1 opción (b)); nulos al final. */
 const byMinutesSinceTriageDesc = (a: QueueItem, b: QueueItem) =>
   (b.minutesSinceTriage ?? -1) - (a.minutesSinceTriage ?? -1);
+/** Con señales de alarma primero (F-11-api, R8): solo en waitingTriage. */
+const byRedFlagsFirst = (a: QueueItem, b: QueueItem) =>
+  Number(b.hasRedFlags) - Number(a.hasRedFlags);
 const byArrival = (a: QueueItem, b: QueueItem) =>
   Date.parse(a.arrivalAt) - Date.parse(b.arrivalAt);
 
 /**
- * Las tres secciones de la cola (R1, R8 de F-06): waitingTriage por mayor espera desde la llegada; triaged por nivel
+ * Las tres secciones de la cola (R1, R8 de F-06): waitingTriage con las que tienen señales de alarma primero (R8 de
+ * F-11-api) y después por mayor espera desde la llegada; triaged por nivel
  * ascendente y más tiempo desde la clasificación (R5 de DT-02-api), con las que no tienen triaged_at al final (R8 de
  * DT-02-api); inCare por nivel ascendente y llegada ascendente. Empates por id. REGISTERED, CLOSED y CANCELLED no
  * aparecen.
@@ -176,7 +184,7 @@ export function buildQueue(rows: QueueRow[], now: Date): Queue {
       });
   return {
     serverNow: now.toISOString(),
-    waitingTriage: section('WAITING_TRIAGE', byWaitDesc),
+    waitingTriage: section('WAITING_TRIAGE', byRedFlagsFirst, byWaitDesc),
     triaged: section(
       'TRIAGED',
       byClassifiedFirst,
