@@ -505,7 +505,7 @@ export class EncountersService {
    * Motivo de consulta, estado y paciente de la atención del tenant para GET /clinical-capture (R20 de F-03) y la
    * sugerencia de F-04; null si no existe, es de otro tenant o el id no es UUID.
    */
-  findCaptureHeader(
+  async findCaptureHeader(
     tenantId: string,
     id: string,
   ): Promise<{
@@ -513,17 +513,29 @@ export class EncountersService {
     chiefComplaintText: string;
     complaintSource: ComplaintSource;
     patientId: string;
+    /** F-11-api (R9): entrevista y señales para la instantánea v2 del LLM. */
+    symptomInterview: SymptomInterviewDto | null;
+    redFlags: RedFlag[];
   } | null> {
-    if (!isUuid(id)) return Promise.resolve(null);
-    return this.prisma.encounter.findFirst({
+    if (!isUuid(id)) return null;
+    const row = await this.prisma.encounter.findFirst({
       where: { id, tenantId },
       select: {
         status: true,
         chiefComplaintText: true,
         complaintSource: true,
         patientId: true,
+        symptomInterview: true,
+        redFlags: true,
       },
     });
+    return row
+      ? {
+          ...row,
+          symptomInterview: row.symptomInterview as SymptomInterviewDto | null,
+          redFlags: row.redFlags as RedFlag[],
+        }
+      : null;
   }
 
   /** POST /encounters/{id}/cancel (R35, R36): motivo en encounters.cancellation_reason, nunca en eventos ni auditoría. */

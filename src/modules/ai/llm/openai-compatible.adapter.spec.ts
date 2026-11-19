@@ -266,6 +266,17 @@ describe('OpenAiCompatibleAdapter (Groq y OpenRouter)', () => {
           description: 'lo trae su esposa; dice que Quintero fuma',
         },
       ],
+      // F-11-api (R9): la entrevista también se sanea antes de salir hacia el LLM.
+      symptomInterview: {
+        turns: [
+          {
+            dimension: 'ONSET',
+            question: '¿Desde cuándo, Hernando?',
+            answer: 'Desde ayer, soy Quintero Ruiz, CC 79-555-123',
+          },
+        ],
+      },
+      redFlags: ['CHEST_PAIN'],
       patient: {
         id: patientId,
         birthDate: '1968-01-10',

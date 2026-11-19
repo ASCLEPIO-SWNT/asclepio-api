@@ -32,6 +32,8 @@ function capture(
         description: 'la hija de Gómez avisa: 52123987',
       },
     ],
+    symptomInterview: null,
+    redFlags: [],
     patient: {
       birthDate: '1968-03-15',
       estimatedAgeYears: null,
@@ -64,6 +66,9 @@ describe('buildSnapshot (D7)', () => {
       'age_years',
       'chief_complaint_text',
       'complaint_source',
+      // triage-v2 (F-11-api, R9).
+      'follow_up',
+      'patient_reported_red_flags',
       'sex',
       'symptom_findings',
       'vital_signs',

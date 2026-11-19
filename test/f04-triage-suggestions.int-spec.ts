@@ -119,7 +119,8 @@ describe('F-04: POST /encounters/{id}/triage-suggestions (integración, LlmClien
       guardReasons: [],
       provider: 'GROQ',
       model: 'openai/gpt-oss-120b',
-      promptVersion: 'triage-v1',
+      // F-11-api (R9): versión vigente del prompt.
+      promptVersion: 'triage-v2',
       latencyMs: expect.any(Number) as number,
       createdAt: NOW.toISOString(),
       requestedBy: { id: nurse.id, fullName: nurse.fullName },
@@ -284,7 +285,8 @@ describe('F-04: POST /encounters/{id}/triage-suggestions (integración, LlmClien
       guardReasons: [{ rule: 'G2', maxLevel: 3, trigger: { news2Total: 5 } }],
       provider: 'OPENROUTER',
       model: 'openai/gpt-oss-120b:proveedor-x',
-      promptVersion: 'triage-v1',
+      // F-11-api (R9): versión vigente del prompt.
+      promptVersion: 'triage-v2',
       rawResponse: validOutput(4),
       tokensIn: 900,
       tokensOut: 120,
@@ -326,6 +328,9 @@ describe('F-04: POST /encounters/{id}/triage-suggestions (integración, LlmClien
         glucose_mg_dl: VITALS.glucoseMgDl,
       },
       symptom_findings: [],
+      // triage-v2 (F-11-api, R9): atención DIRECT, sin entrevista ni señales.
+      follow_up: [],
+      patient_reported_red_flags: [],
     });
   });
 
