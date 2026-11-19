@@ -3,6 +3,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   answeredDimensions,
+  mentionsPain,
+  missingMandatory,
+  resolveOutput,
   DIMENSIONS,
   detectRedFlags,
   FIXED_QUESTIONS,
@@ -185,6 +188,116 @@ describe('interview.rules (F-11-api)', () => {
         valid: true,
         output: { done: true, redFlagSuspected: true },
       });
+    });
+  });
+
+  describe('resolveOutput y dimensiones obligatorias (enmienda tras ai:eval)', () => {
+    const valid = (over: Record<string, unknown> = {}) =>
+      validateQuestion(
+        output({
+          dimension: 'LOCATION',
+          question: '¿Dónde lo sientes?',
+          ...over,
+        }),
+        [],
+      );
+    const answered3 = [turn('ONSET'), turn('DURATION'), turn('INTENSITY')];
+
+    it('R14: mentionsPain detecta dolor, duele y doler sin tildes ni mayúsculas', () => {
+      expect(mentionsPain('Me DUELE la espalda')).toBe(true);
+      expect(mentionsPain('dolores de cabeza')).toBe(true);
+      expect(mentionsPain('empezó a doler ayer')).toBe(true);
+      expect(mentionsPain('tengo mareo')).toBe(false);
+    });
+
+    it('R14: missingMandatory pide ONSET y, si hay dolor en el motivo o en una respuesta, LOCATION', () => {
+      expect(missingMandatory('mareo', [turn('DURATION')])).toBe('ONSET');
+      expect(missingMandatory('mareo', [turn('ONSET')])).toBeNull();
+      expect(missingMandatory('dolor de cabeza', [turn('ONSET')])).toBe(
+        'LOCATION',
+      );
+      expect(
+        missingMandatory('mareo', [
+          turn('ONSET'),
+          turn('ASSOCIATED', 'me duele el oído'),
+        ]),
+      ).toBe('LOCATION');
+      expect(
+        missingMandatory('dolor de cabeza', [
+          turn('ONSET'),
+          turn('LOCATION', null),
+        ]),
+      ).toBeNull();
+    });
+
+    it('R14: done = true con ≥3 respondidas se acepta solo con las obligatorias cubiertas; si no, la pregunta fija de la primera que falta', () => {
+      expect(resolveOutput('mareo', answered3, valid({ done: true }))).toEqual({
+        kind: 'DONE',
+      });
+      expect(
+        resolveOutput('dolor de cabeza', answered3, valid({ done: true })),
+      ).toEqual({
+        kind: 'QUESTION',
+        dimension: 'LOCATION',
+        question: FIXED_QUESTIONS.LOCATION,
+      });
+      const noOnset = [turn('DURATION'), turn('INTENSITY'), turn('ASSOCIATED')];
+      expect(
+        resolveOutput('dolor de cabeza', noOnset, valid({ done: true })),
+      ).toEqual({
+        kind: 'QUESTION',
+        dimension: 'ONSET',
+        question: FIXED_QUESTIONS.ONSET,
+      });
+      // Con menos de 3 respondidas, done no se acepta y sigue la pregunta del LLM.
+      expect(
+        resolveOutput('mareo', [turn('ONSET')], valid({ done: true })),
+      ).toEqual({
+        kind: 'QUESTION',
+        dimension: 'LOCATION',
+        question: '¿Dónde lo sientes?',
+      });
+    });
+
+    it('R13: con 0 turnos respondidos se ignora redFlagSuspected y sigue la pregunta; con alguno, escala (también si falla el texto)', () => {
+      const suspicious = valid({ redFlagSuspected: true });
+      const question = {
+        kind: 'QUESTION',
+        dimension: 'LOCATION',
+        question: '¿Dónde lo sientes?',
+      };
+      expect(resolveOutput('me caí', [], suspicious)).toEqual(question);
+      expect(
+        resolveOutput(
+          'me caí',
+          [turn('ONSET', null)],
+          valid({ redFlagSuspected: true }),
+        ),
+      ).toEqual(question);
+      expect(resolveOutput('me caí', [turn('ONSET')], suspicious)).toEqual({
+        kind: 'RED_FLAG',
+        redFlags: [],
+      });
+      const badText = validateQuestion(
+        output({ redFlagSuspected: true, question: '¿Es urgente?' }),
+        [],
+      );
+      expect(resolveOutput('me caí', [turn('ONSET')], badText)).toEqual({
+        kind: 'RED_FLAG',
+        redFlags: [],
+      });
+      // Sin respuestas, una salida rechazada no escala: se reintenta (null).
+      expect(resolveOutput('me caí', [], badText)).toBeNull();
+    });
+
+    it('R13: una salida inválida sin sospecha devuelve null (reintento o pregunta fija)', () => {
+      expect(
+        resolveOutput(
+          'mareo',
+          [turn('ONSET')],
+          validateQuestion('no es JSON', []),
+        ),
+      ).toBeNull();
     });
   });
 

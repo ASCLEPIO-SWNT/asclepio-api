@@ -14,19 +14,18 @@ import {
 import { redact, type RedactionTarget } from '../ai/redaction.js';
 import { loadPrompt } from '../ai/triage-prompt.builder.js';
 import {
-  answeredDimensions,
   detectRedFlags,
   INTERVIEW_LIMITS,
   type InterviewTurn,
   type NextQuestion,
   nextFallback,
   QUESTION_OUTPUT_SCHEMA,
-  type QuestionOutput,
+  resolveOutput,
   validateQuestion,
 } from './interview.rules.js';
 
-/** Prompt del fallback (ai/prompts/interview-v1.md). */
-export const INTERVIEW_PROMPT_VERSION = 'interview-v1';
+/** Prompt del fallback (ai/prompts/interview-v2.md, R18; interview-v1.md se conserva sin cambios). */
+export const INTERVIEW_PROMPT_VERSION = 'interview-v2';
 
 /** Intentos de salida del LLM: uno y un reintento si no pasa el validador (R12). */
 const LLM_ATTEMPTS = 2;
@@ -114,20 +113,17 @@ export class InterviewAdvisor {
       }
       const checked = validateQuestion(call.content, turns);
       outputs.push(checked.valid ? 'VALID' : 'INVALID');
-      // R13 (enmendado por el humano): esquema válido con redFlagSuspected → RED_FLAG aunque la pregunta no pase el
-      // validador; la pregunta rechazada nunca se devuelve.
-      if (!checked.valid && checked.redFlagSuspected) {
+      // R13 y R14 con sus enmiendas (lógica pura en interview.rules.ts): la pregunta rechazada nunca se devuelve.
+      const result = resolveOutput(chiefComplaintText, turns, checked);
+      if (result) {
+        // Una pregunta distinta de la del LLM es la fija de una dimensión obligatoria (R14 enmendado).
+        const fixed =
+          result.kind === 'QUESTION' &&
+          checked.valid &&
+          result.question !== checked.output.question;
         return {
-          result: { kind: 'RED_FLAG', redFlags: [] },
-          source: 'LLM',
-          llmCalls,
-          outputs,
-        };
-      }
-      if (checked.valid) {
-        return {
-          result: this.fromOutput(checked.output, turns),
-          source: 'LLM',
+          result,
+          source: fixed ? 'FIXED' : 'LLM',
           llmCalls,
           outputs,
         };
@@ -135,18 +131,6 @@ export class InterviewAdvisor {
     }
     // R12: dos salidas inválidas (o el timeout) → la pregunta fija de la primera dimensión no cubierta, o DONE.
     return { result: nextFallback(turns), source: 'FIXED', llmCalls, outputs };
-  }
-
-  /** R13, R14: redFlagSuspected → RED_FLAG (las reglas no hallaron señales: lista vacía); done con ≥3 respondidas → DONE. */
-  private fromOutput(o: QuestionOutput, turns: InterviewTurn[]): NextQuestion {
-    if (o.redFlagSuspected) return { kind: 'RED_FLAG', redFlags: [] };
-    if (
-      o.done &&
-      answeredDimensions(turns) >= INTERVIEW_LIMITS.minAnsweredForDone
-    ) {
-      return { kind: 'DONE' };
-    }
-    return { kind: 'QUESTION', dimension: o.dimension, question: o.question };
   }
 
   /** Groq y, si la llamada falla, OpenRouter (D4 de F-04). Sin presupuesto no se inicia otra llamada. */

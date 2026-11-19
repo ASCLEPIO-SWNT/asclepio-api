@@ -11,6 +11,8 @@ import {
   FIXED_QUESTIONS,
   QUESTION_OUTPUT_SCHEMA,
 } from '../src/modules/interview/interview.rules.js';
+import { loadPrompt } from '../src/modules/ai/triage-prompt.builder.js';
+import { INTERVIEW_PROMPT_VERSION } from '../src/modules/interview/interview-advisor.js';
 import { PatientsService } from '../src/modules/patients/patients.service.js';
 import { createApp } from './e2e-app.js';
 import { FakeLlmClient } from './int/fake-llm.js';
@@ -244,6 +246,84 @@ describe('F-11: next-question con el LLM falso (e2e, sin base)', () => {
     });
   });
 
+  it('R13: con 0 turnos respondidos se ignora redFlagSuspected del LLM y sigue la pregunta', async () => {
+    groq.script(out({ redFlagSuspected: true }));
+    const none = await ask({ chiefComplaintText: 'DEV me caí', turns: [] });
+    expect(none.res.body).toEqual({
+      kind: 'QUESTION',
+      dimension: 'LOCATION',
+      question: '¿Dónde sientes el dolor?',
+    });
+    groq.script(out({ redFlagSuspected: true }));
+    const onlyUnknown = await ask({ turns: [turn('ONSET', null)] });
+    expect(onlyUnknown.res.body).toMatchObject({ kind: 'QUESTION' });
+  });
+
+  it('R13: con 0 turnos respondidos las reglas sobre el motivo siguen escalando en el primer turno', async () => {
+    const { res } = await ask({
+      chiefComplaintText: 'DEV convulsionó',
+      turns: [],
+    });
+    expect(res.body).toEqual({ kind: 'RED_FLAG', redFlags: ['SEIZURE'] });
+    expect(llmCalls()).toBe(0);
+  });
+
+  it('R14: done = true sin ONSET → la pregunta fija de ONSET', async () => {
+    groq.script(out({ done: true }));
+    const { res } = await ask({
+      chiefComplaintText: 'DEV mareo',
+      turns: [turn('DURATION'), turn('INTENSITY'), turn('ASSOCIATED')],
+    });
+    expect(res.body).toEqual({
+      kind: 'QUESTION',
+      dimension: 'ONSET',
+      question: FIXED_QUESTIONS.ONSET,
+    });
+  });
+
+  it('R14: done = true con dolor (en el motivo o en una respuesta) y sin LOCATION → la pregunta fija de LOCATION; con LOCATION → DONE', async () => {
+    groq.script(out({ done: true }));
+    const inComplaint = await ask({
+      chiefComplaintText: 'DEV dolor de espalda',
+      turns: [turn('ONSET'), turn('DURATION'), turn('INTENSITY')],
+    });
+    expect(inComplaint.res.body).toEqual({
+      kind: 'QUESTION',
+      dimension: 'LOCATION',
+      question: FIXED_QUESTIONS.LOCATION,
+    });
+    groq.script(out({ done: true }));
+    const inAnswer = await ask({
+      chiefComplaintText: 'DEV mareo',
+      turns: [
+        turn('ONSET'),
+        turn('DURATION'),
+        turn('ASSOCIATED', 'me duele el oído'),
+      ],
+    });
+    expect(inAnswer.res.body).toMatchObject({ dimension: 'LOCATION' });
+    groq.script(
+      out({ done: true, dimension: 'HISTORY', question: '¿Algo más?' }),
+    );
+    const covered = await ask({
+      chiefComplaintText: 'DEV dolor de espalda',
+      turns: [turn('ONSET'), turn('LOCATION'), turn('INTENSITY')],
+    });
+    expect(covered.res.body).toEqual({ kind: 'DONE' });
+  });
+
+  it('R18: el system enviado al LLM es el prompt interview-v2 (síntomas concretos para redFlagSuspected; inicio y, con dolor, localización antes de done)', async () => {
+    expect(INTERVIEW_PROMPT_VERSION).toBe('interview-v2');
+    groq.script(out());
+    await ask({ turns: [turn('ONSET')] });
+    const system = groq.requests[0].system;
+    expect(system).toBe(loadPrompt('interview-v2'));
+    expect(system).toMatch(/síntomas concretos/);
+    expect(system).toMatch(/nunca ante un motivo vago/);
+    expect(system).toMatch(/`ONSET`/);
+    expect(system).toMatch(/`LOCATION`/);
+  });
+
   it('R14: con 5 turnos responde DONE sin llamar al LLM', async () => {
     const { res } = await ask({
       turns: ['ONSET', 'DURATION', 'INTENSITY', 'LOCATION', 'HISTORY'].map(
@@ -256,7 +336,9 @@ describe('F-11: next-question con el LLM falso (e2e, sin base)', () => {
 
   it('R14: done = true con ≥3 dimensiones respondidas → DONE; con menos, sigue con la pregunta', async () => {
     groq.script(out({ done: true }));
+    // Motivo sin dolor (R14 enmendado: con dolor también haría falta LOCATION).
     const three = await ask({
+      chiefComplaintText: 'DEV mareo',
       turns: [turn('ONSET'), turn('DURATION'), turn('INTENSITY')],
     });
     expect(three.res.body).toEqual({ kind: 'DONE' });

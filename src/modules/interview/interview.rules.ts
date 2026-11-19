@@ -305,3 +305,66 @@ export function answeredDimensions(turns: readonly InterviewTurn[]): number {
   return new Set(turns.filter((t) => t.answer !== null).map((t) => t.dimension))
     .size;
 }
+
+// ---------------------------------------------------------------- Enmienda tras ai:eval (humano, 2026-11-18)
+// Lógica pura y portable (F-11-mobile porta la misma decisión de done y redFlagSuspected).
+
+const PAIN = /\b(dolor|duele|duelen|doler)\w*/;
+
+/** true si el texto normalizado menciona dolor ("dolor", "duele", "doler" y sus formas). */
+export function mentionsPain(text: string): boolean {
+  return PAIN.test(normalizeText(text));
+}
+
+/**
+ * Primera dimensión obligatoria no cubierta antes de aceptar done (R14 enmendado): ONSET siempre y LOCATION si el
+ * motivo o alguna respuesta mencionan dolor. "Cubierta" = preguntada en los turnos (aunque la respuesta sea null).
+ */
+export function missingMandatory(
+  chiefComplaintText: string,
+  turns: readonly InterviewTurn[],
+): Dimension | null {
+  const covered = new Set(turns.map((t) => t.dimension));
+  if (!covered.has('ONSET')) return 'ONSET';
+  const pain =
+    mentionsPain(chiefComplaintText) ||
+    turns.some((t) => t.answer !== null && mentionsPain(t.answer));
+  return pain && !covered.has('LOCATION') ? 'LOCATION' : null;
+}
+
+/**
+ * Decide la respuesta a partir de una salida del LLM ya validada (R13, R14 y sus enmiendas). null = salida inválida
+ * sin sospecha atendible: el llamador reintenta o usa la pregunta fija.
+ * - redFlagSuspected (de una salida con esquema válido, aunque falle el texto) → RED_FLAG, salvo con 0 turnos
+ *   respondidos, donde se ignora (las reglas sobre el motivo ya se aplicaron antes).
+ * - done con ≥3 dimensiones respondidas → DONE si están cubiertas las obligatorias; si no, su pregunta fija.
+ * - En otro caso, la pregunta del LLM.
+ */
+export function resolveOutput(
+  chiefComplaintText: string,
+  turns: readonly InterviewTurn[],
+  checked: QuestionValidation,
+): NextQuestion | null {
+  const suspected = checked.valid
+    ? checked.output.redFlagSuspected
+    : checked.redFlagSuspected === true;
+  if (suspected && answeredDimensions(turns) > 0) {
+    return { kind: 'RED_FLAG', redFlags: [] };
+  }
+  if (!checked.valid) return null;
+  const o = checked.output;
+  if (
+    o.done &&
+    answeredDimensions(turns) >= INTERVIEW_LIMITS.minAnsweredForDone
+  ) {
+    const missing = missingMandatory(chiefComplaintText, turns);
+    return missing
+      ? {
+          kind: 'QUESTION',
+          dimension: missing,
+          question: FIXED_QUESTIONS[missing],
+        }
+      : { kind: 'DONE' };
+  }
+  return { kind: 'QUESTION', dimension: o.dimension, question: o.question };
+}

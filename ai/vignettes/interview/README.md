@@ -1,6 +1,6 @@
 # Viñetas de la entrevista de síntomas (F-11)
 
-Casos **sintéticos** para evaluar el fallback del servidor (`POST /patient/symptom-interview/next-question`, prompt `interview-v1`) con `npm run ai:eval` (F-11.AC8). Son los mismos 14 casos de D11 de `asclepio-mobile/specs/F-11-mobile/design.md` (9 ambiguos y 5 de alarma, 2 de ellos sutiles), para comparar el motor del servidor con el del teléfono.
+Casos **sintéticos** para evaluar el fallback del servidor (`POST /patient/symptom-interview/next-question`, prompt `interview-v2`) con `npm run ai:eval` (F-11.AC8). Son los mismos 14 casos de D11 de `asclepio-mobile/specs/F-11-mobile/design.md` (9 ambiguos y 5 de alarma, 2 de ellos sutiles), para comparar el motor del servidor con el del teléfono.
 
 > Todas están en **borrador** (`reviewed_by: null`): mientras ninguna esté revisada, el umbral no es vinculante.
 

@@ -7,7 +7,10 @@ import { NestFactory } from '@nestjs/core';
 import { AiCoreModule } from '../modules/ai/ai.module.js';
 import { TriageAdvisor } from '../modules/ai/triage-advisor.js';
 import { parseVignette, runEval } from '../modules/ai/vignette-eval.js';
-import { InterviewAdvisor } from '../modules/interview/interview-advisor.js';
+import {
+  INTERVIEW_PROMPT_VERSION,
+  InterviewAdvisor,
+} from '../modules/interview/interview-advisor.js';
 import {
   parseInterviewVignette,
   runInterviewEval,
@@ -39,7 +42,9 @@ async function main(): Promise<number> {
       out,
     );
     out('');
-    out(`ai:eval — ${interviews.length} viñetas de entrevista (interview-v1)`);
+    out(
+      `ai:eval — ${interviews.length} viñetas de entrevista (${INTERVIEW_PROMPT_VERSION})`,
+    );
     const interview = await runInterviewEval(
       app.get(InterviewAdvisor),
       interviews,
