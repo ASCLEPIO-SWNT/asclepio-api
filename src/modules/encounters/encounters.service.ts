@@ -18,6 +18,8 @@ import { AuditService } from '../audit/audit.service.js';
 import { PatientsService } from '../patients/patients.service.js';
 import { TenancyService } from '../tenancy/tenancy.service.js';
 import { UsersService } from '../users/users.service.js';
+import type { SymptomInterviewDto } from '../interview/dto/interview.dto.js';
+import type { RedFlag } from '../interview/interview.rules.js';
 import type {
   ComplaintSource,
   CreateEncounterDto,
@@ -150,6 +152,13 @@ const SUMMARY_SELECT = {
 } as const;
 
 type SummaryRow = Prisma.EncounterGetPayload<{ select: typeof SUMMARY_SELECT }>;
+
+/** GET /encounters/{id} y demás EncounterDto: el resumen más la entrevista y las señales (F-11-api, R6). */
+const DETAIL_SELECT = {
+  ...SUMMARY_SELECT,
+  symptomInterview: true,
+  redFlags: true,
+} as const;
 
 /** true si el error es una violación de único (índices parciales de D7 o encounter_id único). */
 export function isUniqueViolation(e: unknown): boolean {
@@ -587,7 +596,7 @@ export class EncountersService {
     const row = isUuid(id)
       ? await this.prisma.encounter.findFirst({
           where: { id, tenantId },
-          select: SUMMARY_SELECT,
+          select: DETAIL_SELECT,
         })
       : null;
     if (!row) throw new NotFoundException(NOT_FOUND);
@@ -599,6 +608,9 @@ export class EncountersService {
     const names = summary.names;
     return {
       ...summary.dto,
+      // F-11 (R6): respuestas del paciente, no verificadas; las valida la API al recibirlas (R2).
+      symptomInterview: row.symptomInterview as SymptomInterviewDto | null,
+      redFlags: row.redFlags as RedFlag[],
       events: events.map((e) => ({
         id: e.id.toString(),
         type: e.type,

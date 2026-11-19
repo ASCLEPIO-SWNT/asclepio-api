@@ -343,6 +343,9 @@ describe('Pre-registro del paciente y bandeja de recepción (integración)', () 
           sex: 'F',
           isNN: false,
         },
+        // F-11-api (R4, R6): sin entrevista; el motivo de COMPLAINT activa CHEST_PAIN en las reglas del servidor.
+        symptomInterview: null,
+        redFlags: ['CHEST_PAIN'],
       },
       expect.objectContaining({
         id: preB.id,

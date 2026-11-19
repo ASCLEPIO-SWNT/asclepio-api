@@ -259,8 +259,14 @@ export class PreRegistrationsService {
         expiresAt: true,
         chiefComplaintText: true,
         complaintSource: true,
+        symptomInterview: true,
+        redFlags: true,
       },
     });
+    // F-11 (R7): primero los que tienen señales; sort es estable, así que dentro de cada grupo se conserva el orden.
+    rows.sort(
+      (a, b) => Number(b.redFlags.length > 0) - Number(a.redFlags.length > 0),
+    );
     const patientIds = rows.map((r) => r.patientId);
     const [sites, patients, flags] = await Promise.all([
       this.tenancy.findSiteNames(
@@ -285,6 +291,8 @@ export class PreRegistrationsService {
       complaintSource: r.complaintSource,
       identityVerified: flags.get(r.patientId) ?? false,
       patient: patients.get(r.patientId)!,
+      symptomInterview: r.symptomInterview as SymptomInterviewDto | null,
+      redFlags: r.redFlags as RedFlag[],
     }));
   }
 

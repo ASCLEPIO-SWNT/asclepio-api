@@ -15,6 +15,7 @@ import {
 } from 'class-validator';
 import { IsTrimmedLength } from '../../../common/validation/trimmed-length.js';
 import { SymptomInterviewDto } from '../../interview/dto/interview.dto.js';
+import { RED_FLAGS, type RedFlag } from '../../interview/interview.rules.js';
 import { PatientDto } from '../../patients/dto/patients.dto.js';
 import {
   ENCOUNTER_STATUSES,
@@ -194,6 +195,20 @@ export class PendingPreRegistrationDto {
   @ApiProperty({ description: 'identity_verified de la cuenta del paciente.' })
   identityVerified: boolean;
   @ApiProperty({ type: PatientDto }) patient: PatientDto;
+  @ApiProperty({
+    type: SymptomInterviewDto,
+    nullable: true,
+    description:
+      'Respuestas del paciente (no verificadas) de la entrevista de la app (F-11); null sin entrevista.',
+  })
+  symptomInterview: SymptomInterviewDto | null;
+  @ApiProperty({
+    enum: RED_FLAGS,
+    isArray: true,
+    description:
+      'Señales de alarma referidas por el paciente: las de la app unidas a las de las reglas del servidor (F-11, PA-F11-1 provisional). No cambian el nivel sugerido.',
+  })
+  redFlags: RedFlag[];
 }
 
 export class RejectedPreRegistrationDto {
@@ -286,6 +301,20 @@ export class EncounterSummaryDto {
 }
 
 export class EncounterDto extends EncounterSummaryDto {
+  @ApiProperty({
+    type: SymptomInterviewDto,
+    nullable: true,
+    description:
+      'Respuestas del paciente (no verificadas) de la entrevista de la app (F-11); null sin entrevista.',
+  })
+  symptomInterview: SymptomInterviewDto | null;
+  @ApiProperty({
+    enum: RED_FLAGS,
+    isArray: true,
+    description:
+      'Señales de alarma referidas por el paciente: las de la app unidas a las de las reglas del servidor (F-11, PA-F11-1 provisional). No cambian el nivel sugerido.',
+  })
+  redFlags: RedFlag[];
   @ApiProperty({ type: [EncounterEventDto] }) events: EncounterEventDto[];
 }
 
