@@ -24,6 +24,7 @@ function row(
     finalLevel,
     arrivalAt: ago(arrivalMinAgo),
     triagedAt: triagedMinAgo === null ? null : ago(triagedMinAgo),
+    hasRedFlags: false,
     patient: {
       fullName: 'DEV María Pérez',
       birthDate: '1968-03-15',

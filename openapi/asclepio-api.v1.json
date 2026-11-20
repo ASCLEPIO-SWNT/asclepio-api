@@ -2013,6 +2013,110 @@
         ]
       }
     },
+    "/api/v1/patient/symptom-interview/next-question": {
+      "post": {
+        "operationId": "InterviewController_next",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NextQuestionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Siguiente paso de la entrevista. Primero se aplican las reglas de señales de alarma (RED_FLAG). Nada de la petición ni de la respuesta se guarda ni se registra.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NextQuestionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cuerpo inválido: motivo de 1 a 2000 caracteres, 0 a 5 turnos con dimension, question (1–200) y answer (1–500 o null), sin campos extra. Los errores no repiten los valores.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token válido.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token de personal.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas peticiones de este paciente a este endpoint (más de 30 cada 10 min; application/problem+json).",
+            "headers": {
+              "Retry-After": {
+                "description": "Segundos hasta que termina la ventana del límite.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Ningún proveedor del LLM respondió: la app envía el pre-registro sin entrevista.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error en application/problem+json (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "patient"
+        ]
+      }
+    },
     "/api/v1/reports/summary": {
       "get": {
         "description": "Indicadores de las atenciones del tenant (o de la sede siteId) cuya llegada cae en el periodo [from 00:00 −05:00, to+1 00:00 −05:00) de America/Bogota: minutos de llegada a triage por nivel (n, mediana y p90), minutos de triage a atención de los niveles I y II, cumplimiento del nivel II (≤ 30 min desde la clasificación hasta la atención médica, como el indicador \"Tiempo de espera Triage II\" de la Res. 256 de 2016; el nivel I se informa sin porcentaje), concordancia IA–enfermería (acuerdo exacto, kappa de Cohen ponderado cuadrático, sub y sobreclasificación y matriz 5×5, solo con VALIDATE y CORRECT y la sugerencia decidida) y uso del respaldo y de los safety guards. Porcentajes con 1 decimal y null si el denominador es 0.",
@@ -2247,7 +2351,7 @@
   "info": {
     "title": "Asclepio API",
     "description": "Triage de urgencias asistido por IA. La IA propone, el profesional decide.",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "contact": {}
   },
   "tags": [],
@@ -2760,6 +2864,99 @@
           "text"
         ]
       },
+      "InterviewTurnDto": {
+        "type": "object",
+        "properties": {
+          "dimension": {
+            "type": "string",
+            "enum": [
+              "ONSET",
+              "DURATION",
+              "INTENSITY",
+              "LOCATION",
+              "ASSOCIATED",
+              "HISTORY",
+              "MEDS_ALLERGIES",
+              "ALARM_SIGNS"
+            ]
+          },
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "answer": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Respuesta del paciente, no verificada. null = \"No sé / prefiero no responder\"."
+          }
+        },
+        "required": [
+          "dimension",
+          "question",
+          "answer"
+        ]
+      },
+      "SymptomInterviewDto": {
+        "type": "object",
+        "properties": {
+          "engine": {
+            "type": "string",
+            "enum": [
+              "ON_DEVICE",
+              "SERVER"
+            ],
+            "description": "ON_DEVICE: modelo en el teléfono; SERVER: fallback next-question."
+          },
+          "modelId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "turns": {
+            "maxItems": 6,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InterviewTurnDto"
+            }
+          },
+          "redFlags": {
+            "type": "array",
+            "uniqueItems": true,
+            "description": "Señales de alarma que detectó el cliente (PA-F11-1, provisional), sin repetir.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "CHEST_PAIN",
+                "BREATHING_DIFFICULTY",
+                "LOSS_OF_CONSCIOUSNESS",
+                "SEIZURE",
+                "SEVERE_BLEEDING",
+                "STROKE_SIGNS",
+                "SUICIDAL_IDEATION"
+              ]
+            }
+          },
+          "endedBy": {
+            "type": "string",
+            "enum": [
+              "COMPLETE",
+              "MAX_QUESTIONS",
+              "RED_FLAG",
+              "PATIENT"
+            ]
+          }
+        },
+        "required": [
+          "engine",
+          "modelId",
+          "turns",
+          "redFlags",
+          "endedBy"
+        ]
+      },
       "CreatePreRegistrationDto": {
         "type": "object",
         "properties": {
@@ -2778,6 +2975,14 @@
             "enum": [
               "TYPED",
               "VOICE_ON_DEVICE"
+            ]
+          },
+          "interview": {
+            "description": "Entrevista de síntomas de la app (F-11). Opcional: sin ella el pre-registro se crea como en 0.10.0. El servidor añade a redFlags las señales que detectan sus reglas sobre el motivo y las respuestas.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SymptomInterviewDto"
+              }
             ]
           }
         },
@@ -2901,6 +3106,32 @@
           },
           "patient": {
             "$ref": "#/components/schemas/PatientDto"
+          },
+          "symptomInterview": {
+            "nullable": true,
+            "description": "Respuestas del paciente (no verificadas) de la entrevista de la app (F-11); null sin entrevista.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SymptomInterviewDto"
+              }
+            ]
+          },
+          "redFlags": {
+            "type": "array",
+            "description": "Señales de alarma referidas por el paciente: las de la app unidas a las de las reglas del servidor (F-11, PA-F11-1 provisional). No cambian el nivel sugerido.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "CHEST_PAIN",
+                "BREATHING_DIFFICULTY",
+                "LOSS_OF_CONSCIOUSNESS",
+                "SEIZURE",
+                "SEVERE_BLEEDING",
+                "STROKE_SIGNS",
+                "SUICIDAL_IDEATION"
+              ]
+            }
           }
         },
         "required": [
@@ -2912,7 +3143,9 @@
           "chiefComplaintText",
           "complaintSource",
           "identityVerified",
-          "patient"
+          "patient",
+          "symptomInterview",
+          "redFlags"
         ]
       },
       "ConfirmPreRegistrationDto": {
@@ -3128,6 +3361,32 @@
               }
             ]
           },
+          "symptomInterview": {
+            "nullable": true,
+            "description": "Respuestas del paciente (no verificadas) de la entrevista de la app (F-11); null sin entrevista.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SymptomInterviewDto"
+              }
+            ]
+          },
+          "redFlags": {
+            "type": "array",
+            "description": "Señales de alarma referidas por el paciente: las de la app unidas a las de las reglas del servidor (F-11, PA-F11-1 provisional). No cambian el nivel sugerido.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "CHEST_PAIN",
+                "BREATHING_DIFFICULTY",
+                "LOSS_OF_CONSCIOUSNESS",
+                "SEIZURE",
+                "SEVERE_BLEEDING",
+                "STROKE_SIGNS",
+                "SUICIDAL_IDEATION"
+              ]
+            }
+          },
           "events": {
             "type": "array",
             "items": {
@@ -3152,6 +3411,8 @@
           "finalLevel",
           "triagedAt",
           "triagedBy",
+          "symptomInterview",
+          "redFlags",
           "events"
         ]
       },
@@ -4108,6 +4369,10 @@
             "type": "boolean",
             "description": "true solo en triaged cuando el tiempo exacto desde la clasificación (serverNow − triagedAt, en milisegundos) supera maxWaitMinutes (Res. 256 de 2016): nivel I con cualquier tiempo > 0, nivel II con más de 30 min. Como minutesSinceTriage se muestra en minutos completos, puede ser true con minutesSinceTriage igual al máximo (p. ej. 30 min y 1 s). Nunca en III–V, waitingTriage ni inCare."
           },
+          "hasRedFlags": {
+            "type": "boolean",
+            "description": "true si el paciente refirió señales de alarma (F-11, red_flags no vacío). Ordena waitingTriage (con señales primero); no cambia el nivel."
+          },
           "patient": {
             "$ref": "#/components/schemas/QueuePatientDto"
           }
@@ -4123,6 +4388,7 @@
           "minutesSinceTriage",
           "maxWaitMinutes",
           "overdue",
+          "hasRedFlags",
           "patient"
         ]
       },
@@ -4135,7 +4401,7 @@
             "description": "Hora del servidor con la que se calcularon todas las esperas, los minutos desde la clasificación y las alertas de la respuesta."
           },
           "waitingTriage": {
-            "description": "WAITING_TRIAGE, mayor espera desde la llegada (waitMinutes) primero.",
+            "description": "WAITING_TRIAGE: primero las que tienen señales de alarma (hasRedFlags) y, en cada grupo, mayor espera desde la llegada (waitMinutes) primero.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/QueueItemDto"
@@ -4240,6 +4506,78 @@
           "estimate",
           "estimateBasis",
           "serverNow"
+        ]
+      },
+      "NextQuestionRequestDto": {
+        "type": "object",
+        "properties": {
+          "chiefComplaintText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "turns": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InterviewTurnDto"
+            }
+          }
+        },
+        "required": [
+          "chiefComplaintText",
+          "turns"
+        ]
+      },
+      "NextQuestionDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "QUESTION",
+              "DONE",
+              "RED_FLAG"
+            ]
+          },
+          "dimension": {
+            "type": "string",
+            "enum": [
+              "ONSET",
+              "DURATION",
+              "INTENSITY",
+              "LOCATION",
+              "ASSOCIATED",
+              "HISTORY",
+              "MEDS_ALLERGIES",
+              "ALARM_SIGNS"
+            ],
+            "description": "Solo en QUESTION."
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 140,
+            "description": "Solo en QUESTION. Una sola pregunta, terminada en \"?\"."
+          },
+          "redFlags": {
+            "type": "array",
+            "description": "Solo en RED_FLAG: señales de las reglas deterministas (puede ser vacía si solo la sospechó el LLM). La app muestra \"Acude ya a urgencias o llama al 123\".",
+            "items": {
+              "type": "string",
+              "enum": [
+                "CHEST_PAIN",
+                "BREATHING_DIFFICULTY",
+                "LOSS_OF_CONSCIOUSNESS",
+                "SEIZURE",
+                "SEVERE_BLEEDING",
+                "STROKE_SIGNS",
+                "SUICIDAL_IDEATION"
+              ]
+            }
+          }
+        },
+        "required": [
+          "kind"
         ]
       },
       "ReportPeriodDto": {

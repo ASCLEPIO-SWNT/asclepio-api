@@ -1,0 +1,22 @@
+{
+  "id": "IV-006",
+  "title": "Dolor de espalda",
+  "chief_complaint_text": "dolor en la espalda",
+  "scripted_answers": [
+    "Desde que cargué una caja el lunes",
+    "Constante",
+    "Un 7",
+    "Abajo, en la cintura",
+    "Ninguno",
+    "No"
+  ],
+  "expected": {
+    "red_flag": false,
+    "must_cover": [
+      "LOCATION",
+      "INTENSITY"
+    ]
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

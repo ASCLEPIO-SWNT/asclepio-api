@@ -3,8 +3,11 @@ import { join } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import type { TriageInputSnapshot } from './triage-input.js';
 
-/** Prompt vigente (D11). Un prompt publicado no se edita: un cambio crea triage-v2.md y pasa por ai:eval. */
-export const PROMPT_VERSION = 'triage-v1';
+/**
+ * Prompt vigente (D11). Un prompt publicado no se edita: un cambio crea una versión nueva y pasa por ai:eval.
+ * triage-v2 (F-11-api, R9): la instantánea añade follow_up y patient_reported_red_flags.
+ */
+export const PROMPT_VERSION = 'triage-v2';
 
 export interface TriagePrompt {
   promptVersion: string;

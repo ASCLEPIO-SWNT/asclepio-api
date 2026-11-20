@@ -1,0 +1,14 @@
+{
+  "id": "IV-013",
+  "title": "Sutil: presión torácica con esfuerzo",
+  "chief_complaint_text": "siento presión en el pecho al subir escaleras",
+  "scripted_answers": [
+    "Desde hace una semana"
+  ],
+  "expected": {
+    "red_flag": true,
+    "must_cover": []
+  },
+  "source": "BORRADOR — revisar con asesor clínico (casos de D11 de F-11-mobile)",
+  "reviewed_by": null
+}

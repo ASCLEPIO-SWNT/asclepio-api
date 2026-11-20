@@ -30,6 +30,8 @@ const SNAPSHOT: TriageInputSnapshot = {
     glucose_mg_dl: null,
   },
   symptom_findings: [{ kind: 'SYMPTOM', description: 'diaforesis' }],
+  follow_up: [],
+  patient_reported_red_flags: [],
 };
 
 const OUTPUT = {
@@ -120,7 +122,7 @@ describe('TriageAdvisor', () => {
       guardReasons: [],
       provider: 'GROQ',
       model: 'groq-model-reportado',
-      promptVersion: 'triage-v1',
+      promptVersion: 'triage-v2',
       rawResponse: JSON.stringify(OUTPUT),
       tokensIn: 812,
       tokensOut: 95,

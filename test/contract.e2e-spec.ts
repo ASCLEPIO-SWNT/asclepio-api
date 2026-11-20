@@ -5,7 +5,7 @@ import { buildOpenApiDocument } from '../src/app.setup.js';
 import { VITAL_SIGN_DEFINITIONS } from '../src/modules/encounters/vital-signs.rules.js';
 import { createApp } from './e2e-app.js';
 
-describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
+describe('Contrato OpenAPI 0.11.x (e2e, sin base)', () => {
   let app: INestApplication<App>;
   beforeAll(async () => {
     app = await createApp();
@@ -35,6 +35,7 @@ describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
       '/api/v1/patient/profile',
       '/api/v1/patient/queue-position',
       '/api/v1/patient/queue-position/stream',
+      '/api/v1/patient/symptom-interview/next-question',
       '/api/v1/patients',
       '/api/v1/pre-registrations',
       '/api/v1/pre-registrations/{id}/confirm',
@@ -107,9 +108,9 @@ describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
     for (const op of ops) expect(op?.security).toEqual([{ bearer: [] }]);
   });
 
-  it('R21: los tres endpoints de F-03 declaran el esquema bearer y sus respuestas (F-03 publicó 0.4.0; F-04 subió a 0.5.0, F-05 a 0.6.0, F-06 a 0.7.0, F-07 a 0.8.0 y DT-02 a 0.9.0 y F-10 a 0.10.0)', () => {
+  it('R21: los tres endpoints de F-03 declaran el esquema bearer y sus respuestas (F-03 publicó 0.4.0; F-04 subió a 0.5.0, F-05 a 0.6.0, F-06 a 0.7.0, F-07 a 0.8.0 y DT-02 a 0.9.0, F-10 a 0.10.0 y F-11 a 0.11.0)', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.10.0');
+    expect(doc.info.version).toBe('0.11.0');
     const vs = doc.paths['/api/v1/encounters/{id}/vital-signs'].post;
     const sf = doc.paths['/api/v1/encounters/{id}/symptom-findings'].post;
     const cc = doc.paths['/api/v1/encounters/{id}/clinical-capture'].get;
@@ -120,9 +121,9 @@ describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
     expect(cc?.responses['200']).toBeDefined();
   });
 
-  it('R1: info.version es 0.10.0 (F-04 publicó 0.5.0) y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
+  it('R1: info.version es 0.11.0 (F-04 publicó 0.5.0) y las dos operaciones de F-04 declaran bearer, sus respuestas y problem+json', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.10.0');
+    expect(doc.info.version).toBe('0.11.0');
     const path = doc.paths['/api/v1/encounters/{id}/triage-suggestions'];
     for (const op of [path.post, path.get]) {
       expect(op?.security).toEqual([{ bearer: [] }]);
@@ -386,9 +387,9 @@ describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- F-05-api (0.6.0)
 
-  it('R16: info.version es 0.10.0 (F-05 publicó 0.6.0) y POST/GET /encounters/{id}/triage-decision declaran bearer, TriageDecisionDto y problem+json', () => {
+  it('R16: info.version es 0.11.0 (F-05 publicó 0.6.0) y POST/GET /encounters/{id}/triage-decision declaran bearer, TriageDecisionDto y problem+json', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.10.0');
+    expect(doc.info.version).toBe('0.11.0');
     const path = doc.paths['/api/v1/encounters/{id}/triage-decision'];
     for (const op of [path.post, path.get]) {
       expect(op?.security).toEqual([{ bearer: [] }]);
@@ -558,9 +559,9 @@ describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
     content: { 'application/problem+json': expect.any(Object) as object },
   };
 
-  it('R1: info.version es 0.10.0 y GET /queue declara bearer, QueueDto, siteId opcional y los tiempos máximos de la Res. 5596', () => {
+  it('R1: info.version es 0.11.0 y GET /queue declara bearer, QueueDto, siteId opcional y los tiempos máximos de la Res. 5596', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.10.0');
+    expect(doc.info.version).toBe('0.11.0');
     const op = doc.paths['/api/v1/queue'].get;
     expect(op?.security).toEqual([{ bearer: [] }]);
     expect(op?.responses['200']).toMatchObject({
@@ -608,6 +609,8 @@ describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
         'siteName',
         'status',
         'finalLevel',
+        // F-11-api (R8): solo si hay señales, no cuáles.
+        'hasRedFlags',
         'arrivalAt',
         'waitMinutes',
         'minutesSinceTriage',
@@ -697,9 +700,9 @@ describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- F-07-api (0.8.0)
 
-  it('R5: info.version es 0.10.0 (F-07 publicó 0.8.0) y GET /reports/summary declara bearer, ReportSummaryDto, from y to obligatorios y siteId opcional', () => {
+  it('R5: info.version es 0.11.0 (F-07 publicó 0.8.0) y GET /reports/summary declara bearer, ReportSummaryDto, from y to obligatorios y siteId opcional', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.10.0');
+    expect(doc.info.version).toBe('0.11.0');
     const op = doc.paths['/api/v1/reports/summary'].get;
     expect(op?.security).toEqual([{ bearer: [] }]);
     expect(op?.responses['200']).toMatchObject({
@@ -805,9 +808,9 @@ describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- DT-02-api (0.9.0)
 
-  it('R10: info.version es 0.10.0 y QueueItemDto.minutesSinceTriage es integer, nullable y requerido', () => {
+  it('R10: info.version es 0.11.0 y QueueItemDto.minutesSinceTriage es integer, nullable y requerido', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.10.0');
+    expect(doc.info.version).toBe('0.11.0');
     const item = schemaOf(doc, 'QueueItemDto');
     expect(item.properties?.minutesSinceTriage).toMatchObject({
       type: 'integer',
@@ -868,9 +871,9 @@ describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
 
   // ---------------------------------------------------------------- F-10-api (0.10.0)
 
-  it('R1: info.version es 0.10.0 y GET /patient/queue-position declara bearer, QueuePositionDto, ningún parámetro y 400/401/403 problem+json', () => {
+  it('R1: info.version es 0.11.0 y GET /patient/queue-position declara bearer, QueuePositionDto, ningún parámetro y 400/401/403 problem+json', () => {
     const doc = buildOpenApiDocument(app);
-    expect(doc.info.version).toBe('0.10.0');
+    expect(doc.info.version).toBe('0.11.0');
     const op = doc.paths['/api/v1/patient/queue-position'].get;
     expect(op?.security).toEqual([{ bearer: [] }]);
     expect(op?.parameters ?? []).toEqual([]);
@@ -930,5 +933,116 @@ describe('Contrato OpenAPI 0.10.x (e2e, sin base)', () => {
         expect.objectContaining(isProblem),
       ]);
     }
+  });
+
+  // ---------------------------------------------------------------- F-11-api (0.11.0)
+
+  it('R11: info.version es 0.11.0 y POST /patient/symptom-interview/next-question declara bearer, el cuerpo, NextQuestionDto y 400/401/403/429/503 problem+json', () => {
+    const doc = buildOpenApiDocument(app);
+    expect(doc.info.version).toBe('0.11.0');
+    const op =
+      doc.paths['/api/v1/patient/symptom-interview/next-question'].post;
+    expect(op?.security).toEqual([{ bearer: [] }]);
+    expect(op?.requestBody).toMatchObject({
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/NextQuestionRequestDto' },
+        },
+      },
+    });
+    expect(op?.responses['200']).toMatchObject({
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/NextQuestionDto' },
+        },
+      },
+    });
+    expect(op?.responses['201']).toBeUndefined();
+    for (const code of ['400', '401', '403', '429', '503']) {
+      expect([code, op?.responses[code]]).toEqual([
+        code,
+        expect.objectContaining(isProblem),
+      ]);
+    }
+    const res429 = op?.responses['429'] as { headers?: object };
+    expect(res429.headers).toHaveProperty('Retry-After');
+    const req = schemaOf(doc, 'NextQuestionRequestDto');
+    expect(Object.keys(req.properties ?? {}).sort()).toEqual([
+      'chiefComplaintText',
+      'turns',
+    ]);
+    expect(req.properties?.turns).toMatchObject({ maxItems: 5 });
+    const dto = schemaOf(doc, 'NextQuestionDto');
+    expect(Object.keys(dto.properties ?? {}).sort()).toEqual([
+      'dimension',
+      'kind',
+      'question',
+      'redFlags',
+    ]);
+    expect(dto.properties?.kind).toMatchObject({
+      enum: ['QUESTION', 'DONE', 'RED_FLAG'],
+    });
+    expect(dto.required).toEqual(['kind']);
+  });
+
+  it('R1: CreatePreRegistrationDto añade interview opcional (SymptomInterviewDto con turnos de InterviewTurnDto, máx. 6)', () => {
+    const doc = buildOpenApiDocument(app);
+    const create = schemaOf(doc, 'CreatePreRegistrationDto');
+    expect(create.properties?.interview).toMatchObject({
+      allOf: [{ $ref: '#/components/schemas/SymptomInterviewDto' }],
+    });
+    expect(create.required ?? []).not.toContain('interview');
+    const interview = schemaOf(doc, 'SymptomInterviewDto');
+    expect(Object.keys(interview.properties ?? {}).sort()).toEqual([
+      'endedBy',
+      'engine',
+      'modelId',
+      'redFlags',
+      'turns',
+    ]);
+    expect(interview.properties?.turns).toMatchObject({ maxItems: 6 });
+    expect(interview.properties?.engine).toMatchObject({
+      enum: ['ON_DEVICE', 'SERVER'],
+    });
+    expect(interview.properties?.endedBy).toMatchObject({
+      enum: ['COMPLETE', 'MAX_QUESTIONS', 'RED_FLAG', 'PATIENT'],
+    });
+    const turn = schemaOf(doc, 'InterviewTurnDto');
+    expect(turn.properties?.question).toMatchObject({ maxLength: 200 });
+    expect(turn.properties?.answer).toMatchObject({
+      maxLength: 500,
+      nullable: true,
+    });
+    expect(turn.required?.sort()).toEqual(['answer', 'dimension', 'question']);
+  });
+
+  it('R6, R8: EncounterDto y PendingPreRegistrationDto llevan symptomInterview y redFlags; QueueItemDto lleva hasRedFlags; la vista del paciente no cambia', () => {
+    const doc = buildOpenApiDocument(app);
+    for (const name of ['EncounterDto', 'PendingPreRegistrationDto']) {
+      const dto = schemaOf(doc, name);
+      expect([name, dto.properties?.redFlags]).toEqual([
+        name,
+        expect.objectContaining({ type: 'array' }),
+      ]);
+      expect(dto.required).toEqual(
+        expect.arrayContaining(['symptomInterview', 'redFlags']),
+      );
+    }
+    expect(schemaOf(doc, 'QueueItemDto').properties?.hasRedFlags).toMatchObject(
+      { type: 'boolean' },
+    );
+    expect(
+      Object.keys(
+        schemaOf(doc, 'PatientPreRegistrationDto').properties ?? {},
+      ).sort(),
+    ).toEqual([
+      'encounter',
+      'expiresAt',
+      'id',
+      'preRegisteredAt',
+      'siteId',
+      'siteName',
+      'status',
+    ]);
   });
 });

@@ -521,10 +521,13 @@ describe('Registro directo, máquina de estados, cancelación y consulta de aten
         'patient',
         'preRegisteredAt',
         'preRegistrationId',
+        // F-11-api (R6): entrevista del paciente y señales de alarma.
+        'redFlags',
         'registeredBy',
         'siteId',
         'siteName',
         'status',
+        'symptomInterview',
         'triagedAt',
         'triagedBy',
       ]);

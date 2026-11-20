@@ -84,6 +84,14 @@ export function isPresentField(
   if (finding) {
     return Number(finding[1]) < snapshot.symptom_findings.length;
   }
+  // triage-v2 (F-11-api, R9): turnos de la entrevista y señales referidas por el paciente.
+  const followUp = /^follow_up\[(\d+)\]$/.exec(field);
+  if (followUp) {
+    return Number(followUp[1]) < snapshot.follow_up.length;
+  }
+  if (field === 'patient_reported_red_flags') {
+    return snapshot.patient_reported_red_flags.length > 0;
+  }
   return false;
 }
 

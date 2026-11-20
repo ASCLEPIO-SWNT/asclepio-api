@@ -82,6 +82,9 @@ export function parseVignette(raw: unknown): Vignette {
       complaint_source: input!.complaint_source ?? 'TYPED',
       vital_signs: vitals,
       symptom_findings: input!.symptom_findings ?? [],
+      // triage-v2 (F-11-api, R9): sin entrevista en la viñeta, listas vacías.
+      follow_up: input!.follow_up ?? [],
+      patient_reported_red_flags: input!.patient_reported_red_flags ?? [],
     },
     expectedLevel: e!.level as number,
     acceptableLevels: acceptable as number[],

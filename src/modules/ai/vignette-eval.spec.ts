@@ -48,7 +48,7 @@ function fakeAdvisor(levels: Record<string, number | null>, guard = false) {
         guardReasons: [],
         provider: 'GROQ',
         model: 'openai/gpt-oss-120b',
-        promptVersion: 'triage-v1',
+        promptVersion: 'triage-v2',
         rawResponse: null,
         tokensIn: null,
         tokensOut: null,
@@ -90,7 +90,7 @@ describe('ai:eval (D14)', () => {
       'guard=sí',
       'proveedor=GROQ',
       'modelo=openai/gpt-oss-120b',
-      'prompt=triage-v1',
+      'prompt=triage-v2',
       'latencia=1234ms',
       'revisada=no',
     ]) {
@@ -142,6 +142,9 @@ describe('ai:eval (D14)', () => {
         glucose_mg_dl: null,
       },
       symptom_findings: [],
+      // triage-v2 (F-11-api, R9): sin entrevista en la viñeta, listas vacías.
+      follow_up: [],
+      patient_reported_red_flags: [],
     });
   });
 

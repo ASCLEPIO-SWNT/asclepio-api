@@ -1,3 +1,4 @@
+import type { Dimension, RedFlag } from '../interview/interview.rules.js';
 import type { ComplaintSource } from './dto/encounters.dto.js';
 import type { EncounterStatus } from './encounter-state-machine.js';
 import type { SymptomFindingKind } from './symptom-findings.rules.js';
@@ -26,6 +27,12 @@ export interface CaptureForSuggestion {
   } | null;
   /** Todos los hallazgos, en orden de recorded_at e id. */
   symptomFindings: { kind: SymptomFindingKind; description: string }[];
+  /** Entrevista de síntomas del pre-registro (F-11-api); null sin entrevista. Solo los turnos llegan al LLM. */
+  symptomInterview: {
+    turns: { dimension: Dimension; question: string; answer: string | null }[];
+  } | null;
+  /** Señales de alarma de la atención (F-11-api): las del cliente unidas a las de las reglas del servidor. */
+  redFlags: RedFlag[];
   patient: {
     /** YYYY-MM-DD o null. */
     birthDate: string | null;
